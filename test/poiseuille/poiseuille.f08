@@ -1,9 +1,10 @@
 program poiseuille
 
   use grid_2d
-  use navier_stokes
-
+  include 'navier_stokes.h'
+  
   implicit none
+  
   integer :: i, j, n
   character(len=4) :: arg
 
