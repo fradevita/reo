@@ -10,46 +10,23 @@ module navier_stokes
   use grid_2d
   use boundary_conditions
   use hypre_solver
+  use navier_stokes_pub
   include 'mpif.h'
 
-  interface
-    subroutine event()
-    end subroutine event
-  end interface
-
-  ! Maximum number of iteration
-  integer :: nstep = 0, log
-
-  ! Maximum phisycal time
-  real :: Tmax, dt, t
-
-  ! Phisycal parameters of the solver
-  real :: mu = 1.0, rho = 1.0, g = 0.0
-
-  ! Variables of the solver: pressure, velocity field, 
-  ! predicted velocity field and projection operator
-  real, dimension(:,:), allocatable :: u, v, us, vs, p, phi
-
-  ! Source term in momentum equation
-  real :: Sx = 0.0, Sy = 0.0
-
-  ! Divergence tolerance
-  real :: divergence_tol = 1.0e-8
-
-  ! Procedure pointer to function event_output
-  procedure(event), pointer :: event_output => Null()
-  procedure(event), pointer :: event_end => Null()
-  procedure(event), pointer :: event_i => Null()
+  real, dimension(:,:), allocatable :: phi
 
   private
-  public :: nstep, Tmax, dt, rho, g, mu, p, u, v, us, vs, init_ns_solver, solve, &
-       event_output, t, event_end, Sx, event_i, destroy_ns_solver, Sy, log
+  public :: init_ns_solver, solve, destroy_ns_solver
 
 contains
 
   !===============================================================================
   subroutine init_ns_solver
 
+#ifdef IBM
+    use ibm, only : ibm_init
+#endif
+    
     implicit none
 
     ! Initialize MPI
@@ -98,6 +75,11 @@ contains
     ! Create the hypre solver for the poisson equation
     call init_hypre_solver
 
+    ! If using IBM initialize solid bodies
+#ifdef IBM
+    call ibm_init()
+#endif
+
   end subroutine init_ns_solver
   !===============================================================================
 
@@ -110,6 +92,10 @@ contains
     ! momentum equation: du_o and dv_o. rhs is the right-hand side of the
     ! poisson equation. Is a 1D-array of dimension nx*ny.
 
+#ifdef IBM
+    use ibm, only : ibm_tag
+#endif
+    
     implicit none
 
     integer :: istep, i, j
@@ -127,6 +113,12 @@ contains
 
     open(newunit = log, file = 'log')
 
+
+    ! If using IBM initialize solid bodies
+#ifdef IBM
+    call ibm_tag()
+#endif
+    
     ! We advance in time the solution
     do istep = 1, nstep
 
@@ -135,6 +127,7 @@ contains
       t = t + dt
       write(log,*) 'istep: ', istep, 'dt: ', dt, 't: ', t
 
+      
       ! First we compute the predicted velocity field
       call compute_predicted_velocity(du_o, dv_o)
 
@@ -165,6 +158,7 @@ contains
       ! Check divergence of the velocity field and CFL
       call check(istep)
 
+      
       ! Output
       if (associated(event_output)) call event_output()
     end do
@@ -321,6 +315,10 @@ contains
   !===============================================================================
   subroutine compute_predicted_velocity(du_o, dv_o)
 
+#ifdef IBM
+    use ibm, only : ibm_force
+#endif
+ 
     implicit none
     real, intent(inout) :: du_o(:,:), dv_o(:,:)
 
@@ -338,9 +336,17 @@ contains
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
         us(i,j) = u(i,j) + dt * rhs
 
+#ifdef IBM
+        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+#endif
+
         ! y direction
         rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
         vs(i,j) = v(i,j) + dt * rhs
+
+#ifdef IBM
+        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)  
+#endif
 
       end do
     end do
@@ -351,6 +357,10 @@ contains
       rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
       us(i,j) = u(i,j) + dt * rhs
 
+#ifdef IBM
+        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+#endif
+
     end do
 
     ! left column of the grid for vs
@@ -358,6 +368,10 @@ contains
     do j = 2,ny
       rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
       vs(i,j) = v(i,j) + dt * rhs
+
+#ifdef IBM
+        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)  
+#endif
 
     end do
 
@@ -369,12 +383,20 @@ contains
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
         us(i,j) = u(i,j) + dt * rhs
 
+#ifdef IBM
+        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+#endif
+
       end do
 
       i = nx + 1
       do j = 1,ny
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
         us(i,j) = u(i,j) + dt * rhs
+
+#ifdef IBM
+        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+#endif
 
       end do
     end if
@@ -387,12 +409,20 @@ contains
         rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
         vs(i,j) = v(i,j) + dt * rhs
 
+#ifdef IBM
+        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)
+#endif
+
       end do
 
       j = ny + 1
       do i = 1,nx
         rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
         vs(i,j) = v(i,j) + dt * rhs
+
+#ifdef IBM
+        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt) 
+#endif
 
       end do
     endif
