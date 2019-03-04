@@ -20,6 +20,24 @@ module navier_stokes_pub
   ! predicted velocity field and projection operator
   real, dimension(:,:), allocatable :: u, v, us, vs, p
 
+  type field
+    ! Field
+    real, dimension(:,:), allocatable :: f
+    ! Boundary conditions type: periodic, dirichlet or neumann
+    character(len=9) :: left, right, top, bottom
+    ! Boundary conditions values
+    real, dimension(:), allocatable :: l = 0.0, r = 0.0, t = 0.0, b = 0.0
+    ! Identifier between center or face location
+    ! 0 = cell center
+    ! 1 = x face
+    ! 2 = y face
+    integer :: location = 0
+    ! Bound coordinates for domain cylces
+    integer, dimension(2) :: lo, up
+  end type field
+
+  type(field) :: u, v, us, vs, p
+
   ! Source term in momentum equation
   real :: Sx = 0.0, Sy = 0.0
 

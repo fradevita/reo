@@ -14,16 +14,19 @@ module grid_2d
 
   ! Pi
   real, parameter :: pi = acos(-1.0)
-
-  ! Boundary conditions type, can be: no-slip, free-slip, periodic
-  ! By defaul all boundary set to no-slip
+    
+  ! Boundary conditions type, can be:
+  ! no-slip: Dirichlet 0 on normal and tangential velocity, Neumann 0 on pressure
+  ! free-slip: Dirichlet 0 on normal velocity, Dirichlet on tangential velocity,
+  !             Neumann 0 on pressure
+  ! inflow: Dirichlet on normal velocity, Dirichlet 0 on tangential velocity,
+  !           Neumann 0 on pressure
+  ! outflow: Neumann 0 on normal velocity, Dirichlet 0 on tangential velocity,
+  !          Dirichlet 0 on pressure
+  ! periodic: periodic in all directions
+  ! By defaul all boundary are set to no-slip
   character(len=9) :: left_boundary = 'no-slip', right_boundary = 'no-slip'
   character(len=9) :: top_boundary = 'no-slip', bottom_boundary = 'no-slip'
-
-  ! Boundary conditions values
-  real :: u_l = 0.0, u_r = 0.0, u_t = 0.0, u_b = 0.0
-  real :: v_l = 0.0, v_r = 0.0, v_t = 0.0, v_b = 0.0
-  real :: p_l = 0.0, p_r = 0.0, p_t = 0.0, p_b = 0.0
   
 contains
 

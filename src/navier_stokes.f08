@@ -13,7 +13,7 @@ module navier_stokes
   use navier_stokes_pub
   include 'mpif.h'
 
-  real, dimension(:,:), allocatable :: phi
+  type(field) :: phi
 
   private
   public :: init_ns_solver, solve, destroy_ns_solver
@@ -35,21 +35,80 @@ contains
     call MPI_COMM_SIZE(MPI_COMM_WORLD, num_procs, ierr)
     mpi_common_world = MPI_COMM_WORLD
 
-    ! We need to allocate all the fields
-    allocate(p(0:nx+1,0:ny+1))
-    allocate(phi(0:nx+1,0:ny+1))
-    allocate(u(0:nx+2,0:ny+1))
-    allocate(us(0:nx+2,0:ny+1))
-    allocate(v(0:nx+1,0:ny+2))
-    allocate(vs(0:nx+1,0:ny+2))
+    ! Based on the type of boundary, compute the extension for each field
+    u%lo = 1
+    us%lo = 1
+    if (left_boundary == 'no-slip' .or. left_boundary == 'free-slip' .or. &
+        left_boundary == 'periodic') then
+      u%lo(1) = 2
+      us%lo(1) = 2
+    endif
+    u%up(1) = nx + 1
+    us%up(1) = nx + 1
+    u%up(2) = ny
+    us%up(2) = ny
+    if (right_boundary == 'no-slip' .or. right_boundary == 'free-slip') then
+      u%up(1) = nx
+      us%up(1) = nx
+    endif
+
+    v%lo = 1
+    vs%lo = 1
+    if (bottom_boundary == 'no-slip' .or. bottom_boundary == 'free-slip' .or. &
+        bottom_boundary == 'periodic') then
+      v%lo(2) = 2
+      vs%lo(2) = 2
+    endif
+    v%up(1) = nx
+    vs%up(1) = nx
+    v%up(2) = ny + 1
+    vs%up(2) = ny + 1
+    if (top_boundary == 'no-slip' .or. top_boundary == 'free-slip') then
+      v%up(2) = ny
+      vs%up(2) = ny
+    endif
+    
+    p%lo = 1
+    p%up(1) = nx
+    p%up(2) = ny
+    
+    ! Allocate all the fields
+    allocate(p%f(p%lo(1)-1:p%up(1)+1,p%lo(2)-1:p%up(2)+1))
+    allocate(phi%f(phi%lo(1)-1:phi%up(1)+1,phi%lo(2)-1:phi%up(2)+1))
+    allocate(u%f(u%lo(1)-1:u%up(1)+1,u%lo(2)-1:u%up(2)+1))
+    allocate(us%f(us%lo(1)-1:us%up(1)+1,us%lo(2)-1:us%up(2)+1))
+    allocate(v%f(v%lo(1)-1:v%up(1)+1,v%lo(2)-1:v%up(2)+1))
+    allocate(vs%f(vs%lo(1)-1:vs%up(1)+1,vs%lo(2)-1:vs%up(2)+1))
+
+    ! Allocate boundary values
+    allocate(u%l(u%up(2)))
+    allocate(u%r(u%up(2)))
+    allocate(u%t(u%up(1)))
+    allocate(u%b(u%up(1)))
+    allocate(v%l(v%up(2)))
+    allocate(v%r(v%up(2)))
+    allocate(v%t(v%up(1)))
+    allocate(v%b(v%up(1)))
+    allocate(p%l(p%up(2)))
+    allocate(p%r(p%up(2)))
+    allocate(p%b(p%up(1)))
+    allocate(p%t(p%up(1)))
 
     ! We set all the field to zero
-    p = 0.0
-    phi = 0.0
-    u = 0.0
-    us = 0.0
-    v = 0.0
-    vs = 0.0
+    p%f = 0.0
+    phi%f = 0.0
+    u%f = 0.0
+    us%f = 0.0
+    v%f = 0.0
+    vs%f = 0.0
+
+    ! Set field type
+    u%location = 1
+    us%location = 1
+    v%location = 2
+    vs%location = 2
+    p%location = 0
+    phi%location = 0
 
     ! Check for periodicity
     if (left_boundary == 'periodic' .and. right_boundary /= 'periodic') then
@@ -113,7 +172,6 @@ contains
 
     open(newunit = log, file = 'log')
 
-
     ! If using IBM initialize solid bodies
 #ifdef IBM
     call ibm_tag()
@@ -141,7 +199,7 @@ contains
       ! We copy the array rhs in the two-dimensional array phi
       do j = 1,ny
         do i = 1,nx
-          phi(i,j) = rhs(i + (j-1)*ny)
+          phi%f(i,j) = rhs(i + (j-1)*ny)
         end do
       end do
       call boundary_p(phi)
@@ -151,13 +209,11 @@ contains
       call project_velocity()
 
       ! We update the pressure
-      !p = p + phi
-      p = p + 2.0*phi
+      p%f = p%f + phi%f
       call boundary_p(p)
 
       ! Check divergence of the velocity field and CFL
       call check(istep)
-
       
       ! Output
       if (associated(event_output)) call event_output()
@@ -190,22 +246,22 @@ contains
         ip = i + 1
         im = i - 1
         ! x direction
-        uuip  = 0.25 * ( u(ip,j) + u(i,j) ) * ( u(ip,j) + u(i,j)  )
-        uuim  = 0.25 * ( u(im,j) + u(i,j) ) * ( u(im,j) + u(i,j)  )
-        uvjp  = 0.25 * ( u(i,jp) + u(i,j) ) * ( v(i,jp) + v(im,jp))
-        uvjm  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j)  )
+        uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
+        uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
+        uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
+        uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
         du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u(ip,j) - 2.0*u(i,j) + u(im,j))/dxq + &
-             (u(i,jp) - 2.0*u(i,j) + u(i,jm))/dyq)
+             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
+             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
 
         ! y direction
-        uvip  = 0.25 * ( u(ip,jm) + u(ip,j) ) * ( v(i,j) + v(ip,j) )
-        uvim  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j) )
-        vvjp  = 0.25 * ( v(i,j) + v(i,jp) ) * ( v(i,j) + v(i,jp) )
-        vvjm  = 0.25 * ( v(i,j) + v(i,jm) ) * ( v(i,j) + v(i,jm) )
+        uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
+        uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
+        vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
+        vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
         dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v(ip,j) - 2.0*v(i,j) + v(im,j))/dxq + &
-             (v(i,jp) - 2.0*v(i,j) + v(i,jm))/dyq)      
+             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
+             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
       end do
     end do
 
@@ -216,13 +272,13 @@ contains
     do i = 2,nx
       ip = i + 1
       im = i - 1
-      uuip  = 0.25 * ( u(ip,j) + u(i,j) ) * ( u(ip,j) + u(i,j)  )
-      uuim  = 0.25 * ( u(im,j) + u(i,j) ) * ( u(im,j) + u(i,j)  )
-      uvjp  = 0.25 * ( u(i,jp) + u(i,j) ) * ( v(i,jp) + v(im,jp))
-      uvjm  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j)  )
+      uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
+      uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
+      uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
+      uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
       du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-           mu*((u(ip,j) - 2.0*u(i,j) + u(im,j))/dxq + &
-           (u(i,jp) - 2.0*u(i,j) + u(i,jm))/dyq)
+           mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
+           (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
     end do
 
     ! Left column of the grid for v
@@ -232,13 +288,13 @@ contains
     do j = 2,ny
       jp = j + 1
       jm = j - 1
-      uvip  = 0.25 * ( u(ip,jm) + u(ip,j) ) * ( v(i,j) + v(ip,j) )
-      uvim  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j) )
-      vvjp  = 0.25 * ( v(i,j) + v(i,jp) ) * ( v(i,j) + v(i,jp) )
-      vvjm  = 0.25 * ( v(i,j) + v(i,jm) ) * ( v(i,j) + v(i,jm) )
+      uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
+      uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
+      vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
+      vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
       dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-           mu*((v(ip,j) - 2.0*v(i,j) + v(im,j))/dxq + &
-           (v(i,jp) - 2.0*v(i,j) + v(i,jm))/dyq)
+           mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
+           (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)
     end do
 
     ! If the domain is periodic in x direction we need to solve
@@ -250,13 +306,13 @@ contains
       do j = 1,ny
         jp = j + 1
         jm = j - 1
-        uuip  = 0.25 * ( u(ip,j) + u(i,j) ) * ( u(ip,j) + u(i,j)  )
-        uuim  = 0.25 * ( u(im,j) + u(i,j) ) * ( u(im,j) + u(i,j)  )
-        uvjp  = 0.25 * ( u(i,jp) + u(i,j) ) * ( v(i,jp) + v(im,jp))
-        uvjm  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j)  )
+        uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
+        uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
+        uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
+        uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
         du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u(ip,j) - 2.0*u(i,j) + u(im,j))/dxq + &
-             (u(i,jp) - 2.0*u(i,j) + u(i,jm))/dyq)
+             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
+             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
       end do
 
       i = nx + 1
@@ -265,13 +321,13 @@ contains
       do j = 1,ny
         jp = j + 1
         jm = j - 1
-        uuip  = 0.25 * ( u(ip,j) + u(i,j) ) * ( u(ip,j) + u(i,j)  )
-        uuim  = 0.25 * ( u(im,j) + u(i,j) ) * ( u(im,j) + u(i,j)  )
-        uvjp  = 0.25 * ( u(i,jp) + u(i,j) ) * ( v(i,jp) + v(im,jp))
-        uvjm  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j)  )
+        uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
+        uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
+        uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
+        uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
         du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u(ip,j) - 2.0*u(i,j) + u(im,j))/dxq + &
-             (u(i,jp) - 2.0*u(i,j) + u(i,jm))/dyq)
+             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
+             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
       end do
     end if
 
@@ -284,13 +340,13 @@ contains
       do i = 1,nx
         ip = i + 1
         im = i - 1
-        uvip  = 0.25 * ( u(ip,jm) + u(ip,j) ) * ( v(i,j) + v(ip,j) )
-        uvim  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j) )
-        vvjp  = 0.25 * ( v(i,j) + v(i,jp) ) * ( v(i,j) + v(i,jp) )
-        vvjm  = 0.25 * ( v(i,j) + v(i,jm) ) * ( v(i,j) + v(i,jm) )
+        uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
+        uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
+        vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
+        vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
         dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v(ip,j) - 2.0*v(i,j) + v(im,j))/dxq + &
-             (v(i,jp) - 2.0*v(i,j) + v(i,jm))/dyq)      
+             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
+             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
       end do
 
       j = ny + 1
@@ -299,13 +355,13 @@ contains
       do i = 1,nx
         ip = i + 1
         im = i - 1
-        uvip  = 0.25 * ( u(ip,jm) + u(ip,j) ) * ( v(i,j) + v(ip,j) )
-        uvim  = 0.25 * ( u(i,jm) + u(i,j) ) * ( v(i,j) + v(im,j) )
-        vvjp  = 0.25 * ( v(i,j) + v(i,jp) ) * ( v(i,j) + v(i,jp) )
-        vvjm  = 0.25 * ( v(i,j) + v(i,jm) ) * ( v(i,j) + v(i,jm) )
+        uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
+        uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
+        vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
+        vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
         dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v(ip,j) - 2.0*v(i,j) + v(im,j))/dxq + &
-             (v(i,jp) - 2.0*v(i,j) + v(i,jm))/dyq)      
+             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
+             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
       end do
     endif
 
@@ -333,19 +389,19 @@ contains
       do i = 2,nx
 
         ! x direction
-        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
-        us(i,j) = u(i,j) + dt * rhs
+        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
+        us%f(i,j) = u%f(i,j) + dt * rhs
 
 #ifdef IBM
-        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
 #endif
 
         ! y direction
-        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
-        vs(i,j) = v(i,j) + dt * rhs
+        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
+        vs%f(i,j) = v%f(i,j) + dt * rhs
 
 #ifdef IBM
-        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)  
+        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)  
 #endif
 
       end do
@@ -354,11 +410,11 @@ contains
     ! bottom row of the grid for us
     j = 1
     do i = 2,nx
-      rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
-      us(i,j) = u(i,j) + dt * rhs
+      rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
+      us%f(i,j) = u%f(i,j) + dt * rhs
 
 #ifdef IBM
-        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
 #endif
 
     end do
@@ -366,11 +422,11 @@ contains
     ! left column of the grid for vs
     i = 1
     do j = 2,ny
-      rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
-      vs(i,j) = v(i,j) + dt * rhs
+      rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
+      vs%f(i,j) = v%f(i,j) + dt * rhs
 
 #ifdef IBM
-        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)  
+        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)  
 #endif
 
     end do
@@ -380,22 +436,22 @@ contains
     if (left_boundary == 'periodic') then
       i = 1
       do j = 1,ny
-        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
-        us(i,j) = u(i,j) + dt * rhs
+        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
+        us%f(i,j) = u%f(i,j) + dt * rhs
 
 #ifdef IBM
-        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
 #endif
 
       end do
 
       i = nx + 1
       do j = 1,ny
-        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p(i,j) - p(i-1,j)) / (rho*dx) + Sx
-        us(i,j) = u(i,j) + dt * rhs
+        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
+        us%f(i,j) = u%f(i,j) + dt * rhs
 
 #ifdef IBM
-        us(i,j) = us(i,j) + dt * ibm_force(i,j,1,rhs,u(i,j),dt)
+        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
 #endif
 
       end do
@@ -406,22 +462,22 @@ contains
     if (top_boundary == 'periodic') then
       j = 1
       do i = 1,nx
-        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
-        vs(i,j) = v(i,j) + dt * rhs
+        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
+        vs%f(i,j) = v%f(i,j) + dt * rhs
 
 #ifdef IBM
-        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt)
+        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)
 #endif
 
       end do
 
       j = ny + 1
       do i = 1,nx
-        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p(i,j) - p(i,j-1)) / (rho*dy) + Sy
-        vs(i,j) = v(i,j) + dt * rhs
+        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
+        vs%f(i,j) = v%f(i,j) + dt * rhs
 
 #ifdef IBM
-        vs(i,j) = vs(i,j) + dt * ibm_force(i,j,2,rhs,v(i,j),dt) 
+        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt) 
 #endif
 
       end do
@@ -447,8 +503,8 @@ contains
 
     do j = 1,ny
       do i = 1,nx
-        rhs(i+(j-1)*ny) = (rho/dt) * ((us(i+1,j) - us(i,j)) / dx + &
-             (vs(i,j+1) - vs(i,j)) / dy )
+        rhs(i+(j-1)*ny) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
+             (vs%f(i,j+1) - vs%f(i,j)) / dy )
       end do
     end do
 
@@ -464,23 +520,23 @@ contains
     do j = 2,ny
       do i = 2,nx
         ! x direction
-        u(i,j) = us(i,j) - (dt / rho) * ( phi(i,j) - phi(i-1,j) ) / dx
+        u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
 
         ! y direction
-        v(i,j) = vs(i,j) - (dt / rho) * ( phi(i,j) - phi(i,j-1) ) / dy
+        v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
       end do
     end do
 
     ! Bottom row for u component
     j = 1
     do i = 2,nx
-      u(i,j) = us(i,j) - (dt / rho) * ( phi(i,j) - phi(i-1,j) ) / dx
+      u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
     end do
 
     ! Left column for v component
     i = 1
     do j = 2,ny
-      v(i,j) = vs(i,j) - (dt / rho) * ( phi(i,j) - phi(i,j-1) ) / dy
+      v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
     enddo
 
     ! If the domain is periodic in x direction we need to correct
@@ -488,12 +544,12 @@ contains
     if (left_boundary == 'periodic') then
       i = 1
       do j = 1,ny
-        u(i,j) = us(i,j) - (dt / rho) * ( phi(i,j) - phi(i-1,j) ) / dx
+        u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
       end do
 
       i = nx + 1
       do j = 1,ny
-        u(i,j) = us(i,j) - (dt / rho) * ( phi(i,j) - phi(i-1,j) ) / dx
+        u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
       end do
     end if
 
@@ -502,12 +558,12 @@ contains
     if (top_boundary == 'periodic') then
       j = 1
       do i = 1,nx
-        v(i,j) = vs(i,j) - (dt / rho) * ( phi(i,j) - phi(i,j-1) ) / dy
+        v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
       end do
 
       j = ny + 1
       do i = 1,nx
-        v(i,j) = vs(i,j) - (dt / rho) * ( phi(i,j) - phi(i,j-1) ) / dy
+        v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
       end do
     endif
     
@@ -535,7 +591,7 @@ contains
     do j = 1,ny
       do i = 1,nx
         ! Check divergence
-        divergence = (u(i+1,j) - u(i,j)) / dx + (v(i,j+1) - v(i,j)) / dy
+        divergence = (u%f(i+1,j) - u%f(i,j)) / dx + (v%f(i,j+1) - v%f(i,j)) / dy
         if (divergence > maximum_divergence) then
           maximum_divergence = divergence
           imax = i
@@ -543,8 +599,8 @@ contains
         end if
 
         ! Check CFL
-        CFL = 0.5*dt*( (u(i+1,j) + u(i,j)) / dx + (v(i,j+1) + v(i,j)) / dy)
-        if (CFL > maximum_CFL) maximum_CFL = CFL 
+        CFL = 0.5*dt*( (u%f(i+1,j) + u%f(i,j)) / dx + (v%f(i,j+1) + v%f(i,j)) / dy)
+        if (CFL > maximum_CFL) maximum_CFL = CFL
       end do
     end do
 
