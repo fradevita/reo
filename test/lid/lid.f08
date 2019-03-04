@@ -1,7 +1,7 @@
 program lid
 
   use grid_2d
-  use navier_stokes
+  include "navier_stokes.h"
 
   implicit none
   integer :: i, j

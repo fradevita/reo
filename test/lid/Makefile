@@ -1,5 +1,5 @@
 FC = mpif90
-FOPTS = -g -Wall -O2 -fcheck=bound -fdefault-real-8
+FOPTS = -g -Wall -O2 -fcheck=bound -fdefault-real-8 -cpp
 CODE_DIR = $(REO)
 
 #HYPRE_DIR = 
@@ -12,7 +12,7 @@ FLAGS = $(OPTS) $(LIBS) -lstdc++
 # TEST FOR POISSON EQUATION
 #===============================================================================
 lid: lid.o
-	$(FC) -o $@ $< grid_2d.o boundary_conditions.o navier_stokes.o hypre_solver.o $(FLAGS)
+	$(FC) -o $@ $< grid_2d.o boundary_conditions.o navier_stokes.o hypre_solver.o navier_stokes_pub.o $(FLAGS)
 
 lid.o: lid.f08 grid_2d.o navier_stokes.o
 	$(FC) $(FFLAGS) -c $<
@@ -21,7 +21,10 @@ lid.o: lid.f08 grid_2d.o navier_stokes.o
 #===============================================================================
 # Code
 #===============================================================================
-navier_stokes.o: $(CODE_DIR)/navier_stokes.f08 grid_2d.o boundary_conditions.o hypre_solver.o
+navier_stokes.o: $(CODE_DIR)/navier_stokes.f08 grid_2d.o boundary_conditions.o hypre_solver.o navier_stokes_pub.o
+	$(FC) $(FFLAGS) -c $<
+
+navier_stokes_pub.o: $(CODE_DIR)/navier_stokes_pub.f08
 	$(FC) $(FFLAGS) -c $<
 
 hypre_solver.o: $(CODE_DIR)/hypre_solver.f08 grid_2d.o boundary_conditions.o
