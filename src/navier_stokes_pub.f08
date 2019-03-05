@@ -18,15 +18,13 @@ module navier_stokes_pub
 
   ! Variables of the solver: pressure, velocity field, 
   ! predicted velocity field and projection operator
-  real, dimension(:,:), allocatable :: u, v, us, vs, p
-
   type field
     ! Field
     real, dimension(:,:), allocatable :: f
     ! Boundary conditions type: periodic, dirichlet or neumann
     character(len=9) :: left, right, top, bottom
     ! Boundary conditions values
-    real, dimension(:), allocatable :: l = 0.0, r = 0.0, t = 0.0, b = 0.0
+    real, dimension(:), allocatable :: l, r, t, b
     ! Identifier between center or face location
     ! 0 = cell center
     ! 1 = x face

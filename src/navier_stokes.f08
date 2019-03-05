@@ -26,7 +26,7 @@ contains
 #ifdef IBM
     use ibm, only : ibm_init
 #endif
-    
+
     implicit none
 
     ! Initialize MPI
@@ -67,18 +67,112 @@ contains
       v%up(2) = ny
       vs%up(2) = ny
     endif
-    
+
     p%lo = 1
     p%up(1) = nx
     p%up(2) = ny
-    
+
+    ! Base on the type of boundary condition on the domain select the boundary
+    ! conditions for the fields
+    if (left_boundary == 'no-slip' .or. left_boundary == 'inflow') then
+      u%left = 'dirichlet'
+      v%left = 'dirichlet'
+      us%left = 'dirichlet'
+      vs%left = 'dirichlet'
+      p%left = 'nemuann'
+      phi%left = 'neumann'
+    elseif (left_boundary == 'free-slip' .or. left_boundary == 'outflow') then
+      u%left = 'neumann'
+      v%left = 'dirichlet'
+      us%left = 'neumann'
+      vs%left = 'dirichlet'
+      p%left = 'nemuann'
+      phi%left = 'neumann'
+    else
+      u%left = 'periodic'
+      v%left = 'periodic'
+      us%left = 'periodic'
+      vs%left = 'periodic'
+      p%left = 'periodic'
+      phi%left = 'periodic'
+    endif
+
+    if (right_boundary == 'no-slip' .or. right_boundary == 'inflow') then
+      u%right = 'dirichlet'
+      v%right = 'dirichlet'
+      us%right = 'dirichlet'
+      vs%right = 'dirichlet'
+      p%right = 'nemuann'
+      phi%right = 'neumann'
+    elseif (right_boundary == 'free-slip' .or. right_boundary == 'outflow') then
+      u%right = 'neumann'
+      v%right = 'dirichlet'
+      us%right = 'neumann'
+      vs%right = 'dirichlet'
+      p%right = 'nemuann'
+      phi%right = 'neumann'
+    else
+      u%right = 'periodic'
+      v%right = 'periodic'
+      us%right = 'periodic'
+      vs%right = 'periodic'
+      p%right = 'periodic'
+      phi%right = 'periodic'
+    endif
+
+    if (top_boundary == 'no-slip' .or. top_boundary == 'inflow') then
+      u%top = 'dirichlet'
+      v%top = 'dirichlet'
+      us%top = 'dirichlet'
+      vs%top = 'dirichlet'
+      p%top = 'nemuann'
+      phi%top = 'neumann'
+    elseif (top_boundary == 'free-slip' .or. top_boundary == 'outflow') then
+      u%top = 'dirichlet'
+      v%top = 'neumann'
+      us%top = 'dirichlet'
+      vs%top = 'neumann'
+      p%top = 'nemuann'
+      phi%top = 'neumann'
+    else
+      u%top = 'periodic'
+      v%top = 'periodic'
+      us%top = 'periodic'
+      vs%top = 'periodic'
+      p%top = 'periodic'
+      phi%top = 'periodic'
+    endif
+
+    if (bottom_boundary == 'no-slip' .or. bottom_boundary == 'inflow') then
+      u%bottom = 'dirichlet'
+      v%bottom = 'dirichlet'
+      us%bottom = 'dirichlet'
+      vs%bottom = 'dirichlet'
+      p%bottom = 'nemuann'
+      phi%bottom = 'neumann'
+    elseif (bottom_boundary == 'free-slip' .or. bottom_boundary == 'outflow') then
+      u%bottom = 'neumann'
+      v%bottom = 'dirichlet'
+      us%bottom = 'neumann'
+      vs%bottom = 'dirichlet'
+      p%bottom = 'nemuann'
+      phi%bottom = 'neumann'
+    else
+      u%bottom = 'periodic'
+      v%bottom = 'periodic'
+      us%bottom = 'periodic'
+      vs%bottom = 'periodic'
+      p%bottom = 'periodic'
+      phi%bottom = 'periodic'
+    endif
+      
     ! Allocate all the fields
-    allocate(p%f(p%lo(1)-1:p%up(1)+1,p%lo(2)-1:p%up(2)+1))
-    allocate(phi%f(phi%lo(1)-1:phi%up(1)+1,phi%lo(2)-1:phi%up(2)+1))
     allocate(u%f(u%lo(1)-1:u%up(1)+1,u%lo(2)-1:u%up(2)+1))
-    allocate(us%f(us%lo(1)-1:us%up(1)+1,us%lo(2)-1:us%up(2)+1))
     allocate(v%f(v%lo(1)-1:v%up(1)+1,v%lo(2)-1:v%up(2)+1))
+    allocate(p%f(p%lo(1)-1:p%up(1)+1,p%lo(2)-1:p%up(2)+1))
+    allocate(us%f(us%lo(1)-1:us%up(1)+1,us%lo(2)-1:us%up(2)+1))
     allocate(vs%f(vs%lo(1)-1:vs%up(1)+1,vs%lo(2)-1:vs%up(2)+1))
+    allocate(phi%f(phi%lo(1)-1:phi%up(1)+1,phi%lo(2)-1:phi%up(2)+1))
 
     ! Allocate boundary values
     allocate(u%l(u%up(2)))
@@ -104,10 +198,10 @@ contains
 
     ! Set field type
     u%location = 1
-    us%location = 1
     v%location = 2
-    vs%location = 2
     p%location = 0
+    us%location = 1
+    vs%location = 2
     phi%location = 0
 
     ! Check for periodicity
@@ -154,16 +248,16 @@ contains
 #ifdef IBM
     use ibm, only : ibm_tag
 #endif
-    
+
     implicit none
 
     integer :: istep, i, j
     real :: du_o(nx+1,ny), dv_o(nx,ny+1), rhs(nx*ny)
 
     ! First apply the boundary conditions on the initial fields
-    call boundary_u(u)
-    call boundary_v(v)
-    call boundary_p(p)
+    call boundary(u)
+    call boundary(v)
+    call boundary(p)
 
     ! Compute the RHS of momentum equation of the initial velocity field
     du_o = 0.0
@@ -176,7 +270,7 @@ contains
 #ifdef IBM
     call ibm_tag()
 #endif
-    
+
     ! We advance in time the solution
     do istep = 1, nstep
 
@@ -185,7 +279,6 @@ contains
       t = t + dt
       write(log,*) 'istep: ', istep, 'dt: ', dt, 't: ', t
 
-      
       ! First we compute the predicted velocity field
       call compute_predicted_velocity(du_o, dv_o)
 
@@ -202,7 +295,7 @@ contains
           phi%f(i,j) = rhs(i + (j-1)*ny)
         end do
       end do
-      call boundary_p(phi)
+      call boundary(phi)
 
       ! Then we project the predicted velocity field to the divergence-free
       ! velocity
@@ -210,11 +303,11 @@ contains
 
       ! We update the pressure
       p%f = p%f + phi%f
-      call boundary_p(p)
+      call boundary(p)
 
       ! Check divergence of the velocity field and CFL
       call check(istep)
-      
+
       ! Output
       if (associated(event_output)) call event_output()
     end do
@@ -239,10 +332,10 @@ contains
     dxq = dx*dx
     dyq = dy*dy
 
-    do j = 2,ny
+    do j = u%lo(2),u%up(2)
       jp = j + 1
       jm = j - 1
-      do i = 2,nx
+      do i = u%lo(1),u%up(1)
         ip = i + 1
         im = i - 1
         ! x direction
@@ -251,119 +344,25 @@ contains
         uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
         uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
         du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
-             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
+            mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
+            (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
+      end do
+    end do
 
+    do j = v%lo(2),v%up(2)
+      jp = j + 1
+      jm = j - 1
+      do i = v%lo(1),v%up(1)
         ! y direction
         uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
         uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
         vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
         vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
         dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
-             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
+            mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
+            (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
       end do
     end do
-
-    ! Bottom row of the grid for u
-    j = 1
-    jp = j + 1
-    jm = j - 1
-    do i = 2,nx
-      ip = i + 1
-      im = i - 1
-      uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
-      uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
-      uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
-      uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
-      du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-           mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
-           (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
-    end do
-
-    ! Left column of the grid for v
-    i = 1
-    ip = i + 1
-    im = i - 1
-    do j = 2,ny
-      jp = j + 1
-      jm = j - 1
-      uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
-      uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
-      vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
-      vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
-      dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-           mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
-           (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)
-    end do
-
-    ! If the domain is periodic in x direction we need to solve
-    ! also u on the left and right boundaries
-    if (left_boundary == 'periodic') then
-      i = 1
-      ip = i + 1
-      im = i - 1
-      do j = 1,ny
-        jp = j + 1
-        jm = j - 1
-        uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
-        uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
-        uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
-        uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
-        du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
-             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
-      end do
-
-      i = nx + 1
-      ip = i + 1
-      im = i - 1
-      do j = 1,ny
-        jp = j + 1
-        jm = j - 1
-        uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
-        uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
-        uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
-        uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
-        du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
-             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
-             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
-      end do
-    end if
-
-    ! If the domain is periodic in y direction we need to solve
-    ! also v on the bottom and top boundaries
-    if (top_boundary == 'periodic') then
-      j = 1
-      jp = j + 1
-      jm = j - 1
-      do i = 1,nx
-        ip = i + 1
-        im = i - 1
-        uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
-        uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
-        vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
-        vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
-        dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
-             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
-      end do
-
-      j = ny + 1
-      jp = j + 1
-      jm = j - 1
-      do i = 1,nx
-        ip = i + 1
-        im = i - 1
-        uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
-        uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
-        vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
-        vvjm  = 0.25 * ( v%f(i,j) + v%f(i,jm) ) * ( v%f(i,j) + v%f(i,jm) )
-        dv(i,j) = (-uvip + uvim) / dx + (-vvjp + vvjm) / dy + &
-             mu*((v%f(ip,j) - 2.0*v%f(i,j) + v%f(im,j))/dxq + &
-             (v%f(i,jp) - 2.0*v%f(i,j) + v%f(i,jm))/dyq)      
-      end do
-    endif
 
   end subroutine updates
   !===============================================================================
@@ -374,7 +373,7 @@ contains
 #ifdef IBM
     use ibm, only : ibm_force
 #endif
- 
+
     implicit none
     real, intent(inout) :: du_o(:,:), dv_o(:,:)
 
@@ -385,8 +384,8 @@ contains
     call updates(du, dv)
 
     ! Compute the predicted velocity field
-    do j = 2,ny
-      do i = 2,nx
+    do j = us%lo(2),us%up(2)
+      do i = us%lo(1),vs%up(1)
 
         ! x direction
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
@@ -395,6 +394,12 @@ contains
 #ifdef IBM
         us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
 #endif
+
+      end do
+    end do
+
+    do j = vs%lo(2),vs%up(2)
+      do i = vs%lo(1),vs%up(1)
 
         ! y direction
         rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
@@ -407,87 +412,11 @@ contains
       end do
     end do
 
-    ! bottom row of the grid for us
-    j = 1
-    do i = 2,nx
-      rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
-      us%f(i,j) = u%f(i,j) + dt * rhs
-
-#ifdef IBM
-        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
-#endif
-
-    end do
-
-    ! left column of the grid for vs
-    i = 1
-    do j = 2,ny
-      rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
-      vs%f(i,j) = v%f(i,j) + dt * rhs
-
-#ifdef IBM
-        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)  
-#endif
-
-    end do
-
-    ! If the domain is periodic in x direction we need to solve
-    ! also us on the left and right boundaries
-    if (left_boundary == 'periodic') then
-      i = 1
-      do j = 1,ny
-        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
-        us%f(i,j) = u%f(i,j) + dt * rhs
-
-#ifdef IBM
-        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
-#endif
-
-      end do
-
-      i = nx + 1
-      do j = 1,ny
-        rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
-        us%f(i,j) = u%f(i,j) + dt * rhs
-
-#ifdef IBM
-        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
-#endif
-
-      end do
-    end if
-
-    ! If the domain is periodic in y direction we need to solve
-    ! also v on the bottom and top boundaries
-    if (top_boundary == 'periodic') then
-      j = 1
-      do i = 1,nx
-        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
-        vs%f(i,j) = v%f(i,j) + dt * rhs
-
-#ifdef IBM
-        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)
-#endif
-
-      end do
-
-      j = ny + 1
-      do i = 1,nx
-        rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
-        vs%f(i,j) = v%f(i,j) + dt * rhs
-
-#ifdef IBM
-        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt) 
-#endif
-
-      end do
-    endif
-
     du_o = du
     dv_o = dv
 
-    call boundary_u(us)
-    call boundary_v(vs)
+    call boundary(us)
+    call boundary(vs)
 
   end  subroutine compute_predicted_velocity
   !===============================================================================
@@ -504,7 +433,7 @@ contains
     do j = 1,ny
       do i = 1,nx
         rhs(i+(j-1)*ny) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
-             (vs%f(i,j+1) - vs%f(i,j)) / dy )
+            (vs%f(i,j+1) - vs%f(i,j)) / dy )
       end do
     end do
 
@@ -517,58 +446,22 @@ contains
     ! local variables
     integer :: i, j
 
-    do j = 2,ny
-      do i = 2,nx
-        ! x direction
+    ! x direction
+    do j = u%lo(2),u%up(2)
+      do i = u%lo(1),u%up(1)
         u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
+      end do
+    end do
 
-        ! y direction
+    ! y direction
+    do j = v%lo(2),v%up(2)
+      do i = v%lo(1),v%up(1)
         v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
       end do
     end do
 
-    ! Bottom row for u component
-    j = 1
-    do i = 2,nx
-      u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
-    end do
-
-    ! Left column for v component
-    i = 1
-    do j = 2,ny
-      v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
-    enddo
-
-    ! If the domain is periodic in x direction we need to correct
-    ! also u on the left and right boundaries
-    if (left_boundary == 'periodic') then
-      i = 1
-      do j = 1,ny
-        u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
-      end do
-
-      i = nx + 1
-      do j = 1,ny
-        u%f(i,j) = us%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i-1,j) ) / dx
-      end do
-    end if
-
-    ! If the domain is periodic in y direction we need to correct
-    ! also v on the bottom and top boundaries
-    if (top_boundary == 'periodic') then
-      j = 1
-      do i = 1,nx
-        v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
-      end do
-
-      j = ny + 1
-      do i = 1,nx
-        v%f(i,j) = vs%f(i,j) - (dt / rho) * ( phi%f(i,j) - phi%f(i,j-1) ) / dy
-      end do
-    endif
-    
-    call boundary_u(u)
-    call boundary_v(v)
+    call boundary(u)
+    call boundary(v)
 
   end subroutine project_velocity
   !===============================================================================
@@ -606,7 +499,7 @@ contains
 
     if (maximum_divergence > divergence_tol) then
       print *, 'WARNING: divergence is ', maximum_divergence, 'at istep:', istep, &
-           'in :', imax, jmax
+          'in :', imax, jmax
     endif
 
     if (maximum_CFL > 0.8) print *, 'WARNING: CFL is:', maximum_CFL 
@@ -618,7 +511,13 @@ contains
   subroutine destroy_ns_solver()
 
     ! Free the memory and finalize the simulation
-    deallocate(p, phi, u, us, v, vs)
+    deallocate(p%f, phi%f, u%f, us%f, v%f, vs%f)
+    deallocate(u%l, u%b, u%t, u%r)
+    deallocate(v%l, v%b, v%t, v%r)
+    deallocate(p%l, p%b, p%t, p%r)
+    deallocate(us%l, us%b, us%t, us%r)
+    deallocate(vs%l, vs%b, vs%t, vs%r)
+    deallocate(phi%l, phi%b, phi%t, phi%r)
     call destroy_hypre_solver
     call destroy_grid
     call MPI_finalize(ierr)

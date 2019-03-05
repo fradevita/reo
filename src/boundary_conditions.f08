@@ -6,7 +6,7 @@ contains
 
     use grid_2d
     use navier_stokes_pub
-    
+
     implicit none
 
     type(field), intent(inout) :: f
@@ -18,61 +18,61 @@ contains
     
       ! Left boundary
       if (f%left == 'neumann') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(0,j) = f%f(1,j)
         end do
       elseif (f%left == 'periodic') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(0,j) = f%f(nx,j)
         end do
       else !dirichlet
-        do j = 1,ny
-          f%f(0,j) = 2.0*f%l - f%f(1,j)
+        do j = f%lo(2),f%up(2)
+          f%f(0,j) = 2.0*f%l(j) - f%f(1,j)
         end do
       end if
 
       ! Right boundary
       if (f%right == 'neumann') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(nx,j)
         end do
       elseif (f%right == 'periodic') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(1,j)
         end do
       else !dirichlet
-        do j = 1,ny
-          f%f(nx+1,j) = 2.0*f%r - f%f(nx,j)
+        do j = f%lo(2),f%up(2)
+          f%f(nx+1,j) = 2.0*f%r(j) - f%f(nx,j)
         end do
       end if
 
       ! Top boundary
       if (f%top == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,ny)
         end do
       elseif (f%top == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,1)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,ny+1) = 2.0*f%t - f%f(i,ny)
+        do i = f%lo(1),f%up(1)
+          f%f(i,ny+1) = 2.0*f%t(i) - f%f(i,ny)
         end do
       end if
 
       ! Bottom boundary
       if (f%bottom == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(i,1)
         end do
       elseif (f%bottom == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(1,ny)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,0) = 2.0*f%b - f%f(i,1)
+        do i = f%lo(1),f%up(1)
+          f%f(i,0) = 2.0*f%b(i) - f%f(i,1)
         end do
       end if
 
@@ -80,61 +80,61 @@ contains
 
       ! Left boundary
       if (f%left == 'neumann') then
-        do j = 1,ny
-          f%f(0,j) = f%f(2,j)
+        do j = f%lo(2),f%up(2)
+          f%f(f%lo(1)-1,j) = f%f(f%lo(1)+1,j)
         end do
       elseif (f%left == 'periodic') then
-        do j = 1,ny
-          f%f(0,j) = f%f(nx,j)
+        do j = f%lo(2),f%up(2)
+          f%f(f%lo(1)-1,j) = f%f(f%up(1),j)
         end do
       else ! dirichlet
-        do j = 1,ny
-          f%f(1,j) = *f%l
+        do j = f%lo(2),f%up(2)
+          f%f(f%lo(1)-1,j) = f%l(j)
         end do
       end if
 
       ! Right boundary
       if (f%right == 'neumann') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(nx,j)
         end do
       elseif (f%right == 'periodic') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(1,j)
         end do
       else !dirichlet
-        do j = 1,ny
-          f%f(nx+1,j) = 2.0*f%r - f%f(nx,j)
+        do j = f%lo(2),f%up(2)
+          f%f(nx+1,j) = 2.0*f%r(j) - f%f(nx,j)
         end do
       end if
 
       ! Top boundary
       if (f%top == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,ny)
         end do
       elseif (f%top == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,1)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,ny+1) = 2.0*f%t - f%f(i,ny)
+        do i = f%lo(1),f%up(1)
+          f%f(i,ny+1) = 2.0*f%t(i) - f%f(i,ny)
         end do
       end if
 
       ! Bottom boundary
       if (f%bottom == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(i,1)
         end do
       elseif (f%bottom == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(1,ny)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,0) = 2.0*f%b - f%f(i,1)
+        do i = f%lo(1),f%up(1)
+          f%f(i,0) = 2.0*f%b(i) - f%f(i,1)
         end do
       end if
 
@@ -142,66 +142,66 @@ contains
 
       ! Left boundary
       if (f%left == 'neumann') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(0,j) = f%f(1,j)
         end do
       elseif (f%left == 'periodic') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(0,j) = f%f(nx,j)
         end do
       else !dirichlet
-        do j = 1,ny
-          f%f(0,j) = 2.0*f%l - f%f(1,j)
+        do j = f%lo(2),f%up(2)
+          f%f(0,j) = 2.0*f%l(j) - f%f(1,j)
         end do
       end if
 
       ! Right boundary
       if (f%right == 'neumann') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(nx,j)
         end do
       elseif (f%right == 'periodic') then
-        do j = 1,ny
+        do j = f%lo(2),f%up(2)
           f%f(nx+1,j) = f%f(1,j)
         end do
       else !dirichlet
-        do j = 1,ny
-          f%f(nx+1,j) = 2.0*f%r - f%f(nx,j)
+        do j = f%lo(2),f%up(2)
+          f%f(nx+1,j) = 2.0*f%r(j) - f%f(nx,j)
         end do
       end if
 
       ! Top boundary
       if (f%top == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,ny)
         end do
       elseif (f%top == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,ny+1) = f%f(i,1)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,ny+1) = 2.0*f%t - f%f(i,ny)
+        do i = f%lo(1),f%up(1)
+          f%f(i,ny+1) = 2.0*f%t(i) - f%f(i,ny)
         end do
       end if
 
       ! Bottom boundary
       if (f%bottom == 'neumann') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(i,1)
         end do
       elseif (f%bottom == 'periodic') then
-        do i = 1,nx
+        do i = f%lo(1),f%up(1)
           f%f(i,0) = f%f(1,ny)
         end do
       else !dirichlet
-        do i = 1,nx
-          f%f(i,0) = 2.0*f%b - f%f(i,1)
+        do i = f%lo(1),f%up(1)
+          f%f(i,0) = 2.0*f%b(i) - f%f(i,1)
         end do
       end if
 
     end select
-    
+
   end subroutine boundary
   
   ! subroutine boundary_u(u)

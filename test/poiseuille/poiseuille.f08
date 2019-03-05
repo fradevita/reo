@@ -56,7 +56,7 @@ contains
 
     do j = 1,ny
       do i = 1,nx+1
-        uold(i,j) = u(i,j)
+        uold(i,j) = u%f(i,j)
       end do
     end do
     
@@ -75,7 +75,7 @@ contains
     
     do j = 1,ny
       do i = 1,nx+1
-        diff = abs(u(i,j) - uold(i,j))
+        diff = abs(u%f(i,j) - uold(i,j))
         if (diff > 1.0e-8) steady = .false.
       end do
     end do
@@ -86,7 +86,7 @@ contains
       do j = 1,ny
         do i = 1,nx
           s = 0.5*(0.25 - (y(i,j))**2)
-          e = abs(s-u(i,j))
+          e = abs(s-u%f(i,j))
           if (e > emax) then
             emax = e
             imax = i
