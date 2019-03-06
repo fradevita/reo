@@ -9,7 +9,7 @@ module hypre_solver
 
   ! Define some properties of the solver
   integer :: verbose = 0, periodic(2) = [0, 0]
-  real :: tolerance = 1.0e-12 
+  real :: tolerance = 1.0e-3
   
   private
   public :: init_hypre_solver, solve_poisson, destroy_hypre_solver, &

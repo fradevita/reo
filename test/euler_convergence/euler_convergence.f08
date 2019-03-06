@@ -31,19 +31,19 @@ program euler
   call init_ns_solver()
 
   ! We set the initial velocity field
-  do j = 1,ny
+  do j = u%lo(2),u%up(2)
     yl = y0 + (j - 0.5) * dy
-    do i = 1,nx+1
-      xl = x0 + (i - 1.0) * dx 
-      u(i,j) = 1.0 - 2.0*cos(2.0*pi*xl)*sin(2.0*pi*yl)
+    do i = u%lo(1),u%up(1)
+      xl = x0 + (i - 1.0) * dx
+      u%f(i,j) = 1.0 - 2.0*cos(2.0*pi*xl)*sin(2.0*pi*yl)
     end do
   end do
 
-  do j = 1,ny+1
+  do j = v%lo(2),v%up(2)
     yl = y0 + (j - 1.0) * dy
-    do i = 1,nx
+    do i = v%lo(1),v%up(1)
       xl = x0 + (i - 0.5) * dx
-      v(i,j) = 1.0 + 2.0*sin(2.0*pi*xl)*cos(2.0*pi*yl)
+      v%f(i,j) = 1.0 + 2.0*sin(2.0*pi*xl)*cos(2.0*pi*yl)
     end do
   end do
 
@@ -63,18 +63,20 @@ program euler
   call solve()
 
 contains
-
+  
   subroutine output_error()
     
     ! Compute the error with respect to the analytical solution
     
     real :: s, e, e2
-    
+
     e2 = 0.0
-    do j = 1,ny
-      do i = 1,nx
-        s = 1.0 - 2.0 * cos(2.0*pi*(x(i,j) - dx/2.0 - t))*sin(2.0*pi*(y(i,j)-t))
-        e = abs(s-u(i,j))
+    do j = u%lo(2),u%up(2)
+      yl = y0 + (j - 0.5) * dy
+      do i = u%lo(1),u%up(1)
+         xl = x0 + (i - 1.0) * dx
+        s = 1.0 - 2.0 * cos(2.0*pi*(xl - t))*sin(2.0*pi*(yl-t))
+        e = abs(s-u%f(i,j))
         e2 = e2 + e**2 * dx**2
       end do
     end do

@@ -13,7 +13,7 @@ module navier_stokes
   use navier_stokes_pub
   include 'mpif.h'
 
-  type(field) :: phi
+  !type(field) :: us, vs, phi
 
   private
   public :: init_ns_solver, solve, destroy_ns_solver
@@ -39,7 +39,7 @@ contains
     u%lo = 1
     us%lo = 1
     if (left_boundary == 'no-slip' .or. left_boundary == 'free-slip' .or. &
-        left_boundary == 'periodic') then
+        left_boundary == 'inflow'  .or. left_boundary == 'periodic') then
       u%lo(1) = 2
       us%lo(1) = 2
     endif
@@ -47,7 +47,8 @@ contains
     us%up(1) = nx + 1
     u%up(2) = ny
     us%up(2) = ny
-    if (right_boundary == 'no-slip' .or. right_boundary == 'free-slip') then
+    if (right_boundary == 'no-slip' .or. right_boundary == 'free-slip' .or. &
+        right_boundary == 'inflow') then
       u%up(1) = nx
       us%up(1) = nx
     endif
@@ -55,7 +56,7 @@ contains
     v%lo = 1
     vs%lo = 1
     if (bottom_boundary == 'no-slip' .or. bottom_boundary == 'free-slip' .or. &
-        bottom_boundary == 'periodic') then
+        bottom_boundary == 'inflow'  .or. bottom_boundary == 'periodic') then
       v%lo(2) = 2
       vs%lo(2) = 2
     endif
@@ -63,7 +64,8 @@ contains
     vs%up(1) = nx
     v%up(2) = ny + 1
     vs%up(2) = ny + 1
-    if (top_boundary == 'no-slip' .or. top_boundary == 'free-slip') then
+    if (top_boundary == 'no-slip' .or. top_boundary == 'free-slip' .or. &
+        top_boundary == 'inflow') then
       v%up(2) = ny
       vs%up(2) = ny
     endif
@@ -71,30 +73,43 @@ contains
     p%lo = 1
     p%up(1) = nx
     p%up(2) = ny
+    phi%lo = 1
+    phi%up(1) = nx
+    phi%up(2) = ny
 
-    ! Base on the type of boundary condition on the domain select the boundary
-    ! conditions for the fields
+    ! Base on the type of boundary condition on the domain
+    ! select the boundary conditions for the fields
     if (left_boundary == 'no-slip' .or. left_boundary == 'inflow') then
       u%left = 'dirichlet'
       v%left = 'dirichlet'
       us%left = 'dirichlet'
       vs%left = 'dirichlet'
-      p%left = 'nemuann'
+      p%left = 'neumann'
       phi%left = 'neumann'
-    elseif (left_boundary == 'free-slip' .or. left_boundary == 'outflow') then
+    elseif (left_boundary == 'free-slip') then
+      u%left = 'dirichlet'
+      v%left = 'neumann'
+      us%left = 'dirichlet'
+      vs%left = 'neumann'
+      p%left = 'neumann'
+      phi%left = 'neumann'
+    elseif (left_boundary == 'outflow') then
       u%left = 'neumann'
       v%left = 'dirichlet'
       us%left = 'neumann'
       vs%left = 'dirichlet'
-      p%left = 'nemuann'
-      phi%left = 'neumann'
-    else
+      p%left = 'dirichlet'
+      phi%left = 'dirichlet'
+    elseif (left_boundary == 'periodic') then
       u%left = 'periodic'
       v%left = 'periodic'
       us%left = 'periodic'
       vs%left = 'periodic'
       p%left = 'periodic'
       phi%left = 'periodic'
+    else
+      print *, 'ERROR on left_boundary'
+      stop
     endif
 
     if (right_boundary == 'no-slip' .or. right_boundary == 'inflow') then
@@ -102,22 +117,32 @@ contains
       v%right = 'dirichlet'
       us%right = 'dirichlet'
       vs%right = 'dirichlet'
-      p%right = 'nemuann'
+      p%right = 'neumann'
       phi%right = 'neumann'
-    elseif (right_boundary == 'free-slip' .or. right_boundary == 'outflow') then
+    elseif (right_boundary == 'free-slip') then
+      u%right = 'dirichlet'
+      v%right = 'neumann'
+      us%right = 'dirichlet'
+      vs%right = 'neumann'
+      p%right = 'neumann'
+      phi%right = 'neumann'
+    elseif (right_boundary == 'outflow') then
       u%right = 'neumann'
       v%right = 'dirichlet'
       us%right = 'neumann'
       vs%right = 'dirichlet'
-      p%right = 'nemuann'
-      phi%right = 'neumann'
-    else
+      p%right = 'dirichlet'
+      phi%right = 'dirichlet'
+    elseif (right_boundary == 'periodic') then
       u%right = 'periodic'
       v%right = 'periodic'
       us%right = 'periodic'
       vs%right = 'periodic'
       p%right = 'periodic'
       phi%right = 'periodic'
+    else
+      print *, 'ERROR on right_boundary'
+      stop
     endif
 
     if (top_boundary == 'no-slip' .or. top_boundary == 'inflow') then
@@ -125,22 +150,32 @@ contains
       v%top = 'dirichlet'
       us%top = 'dirichlet'
       vs%top = 'dirichlet'
-      p%top = 'nemuann'
+      p%top = 'neumann'
       phi%top = 'neumann'
-    elseif (top_boundary == 'free-slip' .or. top_boundary == 'outflow') then
+    elseif (top_boundary == 'free-slip' ) then
+      u%top = 'neumann'
+      v%top = 'dirichlet'
+      us%top = 'neumann'
+      vs%top = 'dirichlet'
+      p%top = 'neumann'
+      phi%top = 'neumann'
+    elseif (top_boundary == 'outflow') then
       u%top = 'dirichlet'
       v%top = 'neumann'
       us%top = 'dirichlet'
       vs%top = 'neumann'
-      p%top = 'nemuann'
-      phi%top = 'neumann'
-    else
+      p%top = 'dirichlet'
+      phi%top = 'dirichlet'
+    elseif (top_boundary == 'periodic') then
       u%top = 'periodic'
       v%top = 'periodic'
       us%top = 'periodic'
       vs%top = 'periodic'
       p%top = 'periodic'
       phi%top = 'periodic'
+    else
+      print *, 'ERROR on top boundary'
+      stop
     endif
 
     if (bottom_boundary == 'no-slip' .or. bottom_boundary == 'inflow') then
@@ -148,24 +183,34 @@ contains
       v%bottom = 'dirichlet'
       us%bottom = 'dirichlet'
       vs%bottom = 'dirichlet'
-      p%bottom = 'nemuann'
+      p%bottom = 'neumann'
       phi%bottom = 'neumann'
-    elseif (bottom_boundary == 'free-slip' .or. bottom_boundary == 'outflow') then
+    elseif (bottom_boundary == 'free-slip') then
+      u%bottom = 'dirichlet'
+      v%bottom = 'neumann'
+      us%bottom = 'dirichlet'
+      vs%bottom = 'neumann'
+      p%bottom = 'neumann'
+      phi%bottom = 'neumann'
+    elseif (bottom_boundary == 'outflow') then
       u%bottom = 'neumann'
       v%bottom = 'dirichlet'
       us%bottom = 'neumann'
       vs%bottom = 'dirichlet'
-      p%bottom = 'nemuann'
-      phi%bottom = 'neumann'
-    else
+      p%bottom = 'dirichlet'
+      phi%bottom = 'dirichlet'      
+    elseif (bottom_boundary == 'periodic') then
       u%bottom = 'periodic'
       v%bottom = 'periodic'
       us%bottom = 'periodic'
       vs%bottom = 'periodic'
       p%bottom = 'periodic'
       phi%bottom = 'periodic'
+    else
+      print *, 'ERROR on bottom boundary'
+      stop
     endif
-      
+
     ! Allocate all the fields
     allocate(u%f(u%lo(1)-1:u%up(1)+1,u%lo(2)-1:u%up(2)+1))
     allocate(v%f(v%lo(1)-1:v%up(1)+1,v%lo(2)-1:v%up(2)+1))
@@ -174,20 +219,59 @@ contains
     allocate(vs%f(vs%lo(1)-1:vs%up(1)+1,vs%lo(2)-1:vs%up(2)+1))
     allocate(phi%f(phi%lo(1)-1:phi%up(1)+1,phi%lo(2)-1:phi%up(2)+1))
 
-    ! Allocate boundary values
-    allocate(u%l(u%up(2)))
-    allocate(u%r(u%up(2)))
-    allocate(u%t(u%up(1)))
-    allocate(u%b(u%up(1)))
-    allocate(v%l(v%up(2)))
-    allocate(v%r(v%up(2)))
-    allocate(v%t(v%up(1)))
-    allocate(v%b(v%up(1)))
-    allocate(p%l(p%up(2)))
-    allocate(p%r(p%up(2)))
-    allocate(p%b(p%up(1)))
-    allocate(p%t(p%up(1)))
+    ! Allocate boundary values and set to zero
+    allocate(u%l(u%lo(2)-1:u%up(2)+1))
+    allocate(u%r(u%lo(2)-1:u%up(2)+1))
+    allocate(u%t(u%lo(1)-1:u%up(1)+1))
+    allocate(u%b(u%lo(1)-1:u%up(1)+1))
+    allocate(v%l(v%lo(2)-1:v%up(2)+1))
+    allocate(v%r(v%lo(2)-1:v%up(2)+1))
+    allocate(v%t(v%lo(1)-1:v%up(1)+1))
+    allocate(v%b(v%lo(1)-1:v%up(1)+1))
+    allocate(p%l(p%lo(2)-1:p%up(2)+1))
+    allocate(p%r(p%lo(2)-1:p%up(2)+1))
+    allocate(p%b(p%lo(1)-1:p%up(1)+1))
+    allocate(p%t(p%lo(1)-1:p%up(1)+1))
 
+    allocate(us%l(us%lo(2)-1:u%up(2)+1))
+    allocate(us%r(us%lo(2)-1:u%up(2)+1))
+    allocate(us%t(us%lo(1)-1:u%up(1)+1))
+    allocate(us%b(us%lo(1)-1:u%up(1)+1))
+    allocate(vs%l(vs%lo(2)-1:v%up(2)+1))
+    allocate(vs%r(vs%lo(2)-1:v%up(2)+1))
+    allocate(vs%t(vs%lo(1)-1:v%up(1)+1))
+    allocate(vs%b(vs%lo(1)-1:v%up(1)+1))
+    allocate(phi%l(phi%lo(2)-1:p%up(2)+1))
+    allocate(phi%r(phi%lo(2)-1:p%up(2)+1))
+    allocate(phi%b(phi%lo(2)-1:p%up(1)+1))
+    allocate(phi%t(phi%lo(2)-1:p%up(1)+1))
+
+    u%l = 0.0
+    u%r = 0.0
+    u%t = 0.0
+    u%b = 0.0
+    v%l = 0.0
+    v%r = 0.0
+    v%t = 0.0
+    v%b = 0.0
+    p%l = 0.0
+    p%r = 0.0
+    p%t = 0.0
+    p%b = 0.0
+
+    us%l = 0.0
+    us%r = 0.0
+    us%t = 0.0
+    us%b = 0.0
+    vs%l = 0.0
+    vs%r = 0.0
+    vs%t = 0.0
+    vs%b = 0.0
+    phi%l = 0.0
+    phi%r = 0.0
+    phi%t = 0.0
+    phi%b = 0.0
+        
     ! We set all the field to zero
     p%f = 0.0
     phi%f = 0.0
@@ -254,6 +338,21 @@ contains
     integer :: istep, i, j
     real :: du_o(nx+1,ny), dv_o(nx,ny+1), rhs(nx*ny)
 
+    ! We need to overwrtie the boundary on the projected field and operator with that
+    ! on velocity and pressure
+    us%l = u%l
+    us%r = u%r
+    us%t = u%t
+    us%b = u%b
+    vs%l = v%l
+    vs%r = v%r
+    vs%t = v%t
+    vs%b = v%b
+    phi%l = p%l
+    phi%r = p%r
+    phi%t = p%t
+    phi%b = p%b
+    
     ! First apply the boundary conditions on the initial fields
     call boundary(u)
     call boundary(v)
@@ -303,6 +402,7 @@ contains
 
       ! We update the pressure
       p%f = p%f + phi%f
+      !p%f = p%f - p%f(1,1)
       call boundary(p)
 
       ! Check divergence of the velocity field and CFL
@@ -353,6 +453,8 @@ contains
       jp = j + 1
       jm = j - 1
       do i = v%lo(1),v%up(1)
+        ip = i + 1
+        im = i - 1
         ! y direction
         uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
         uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
@@ -385,7 +487,7 @@ contains
 
     ! Compute the predicted velocity field
     do j = us%lo(2),us%up(2)
-      do i = us%lo(1),vs%up(1)
+      do i = us%lo(1),us%up(1)
 
         ! x direction
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx

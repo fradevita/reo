@@ -15,11 +15,11 @@ module navier_stokes_pub
 
   ! Phisycal parameters of the solver
   real :: mu = 1.0, rho = 1.0, g = 0.0
-
+  
   ! Variables of the solver: pressure, velocity field, 
   ! predicted velocity field and projection operator
   type field
-    ! Field
+    ! Array of the field
     real, dimension(:,:), allocatable :: f
     ! Boundary conditions type: periodic, dirichlet or neumann
     character(len=9) :: left, right, top, bottom
@@ -34,7 +34,7 @@ module navier_stokes_pub
     integer, dimension(2) :: lo, up
   end type field
 
-  type(field) :: u, v, us, vs, p
+  type(field) :: u, v, p, us, vs, phi
 
   ! Source term in momentum equation
   real :: Sx = 0.0, Sy = 0.0

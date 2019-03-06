@@ -32,14 +32,14 @@ program poiseuille
 
   ! First we need to initialize the solver
   call init_ns_solver()
-
+  
   ! We set the viscosity to 1
   mu = 1.0
 
   ! Source term
   Sx = 1.0
 
-  ! We compute the solution up to time T = 2.0
+  ! Set the timestep and maximum number of iterations
   dt = 0.1*(dx**2 + dy**2) / mu
   nstep = 100000
 
@@ -59,7 +59,7 @@ contains
         uold(i,j) = u%f(i,j)
       end do
     end do
-    
+
   end subroutine e_istep
     
   subroutine output()

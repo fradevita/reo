@@ -8,10 +8,7 @@ program lid
 
   ! We need an auxiliary field to check steady state
   real, dimension(:,:), allocatable :: uold
-  
-  ! Boundary conditions
-  u_t = 1.0
-  
+
   ! Set the number of points and the domain size
   nx = 64
   ny = 64
@@ -28,14 +25,15 @@ program lid
   ! First we need to initialize the solver
   call init_ns_solver()
 
+  ! Boundary conditions
+  u%t = 1.0
+  
   ! We set the viscosity to 1
   mu = 1.0e-3
 
-  ! We compute the solution up to time T = 300
+  ! We compute the solution up to steady state
   dt = min(0.3 * dx / 1.0, 0.1*(dx**2 + dy**2) / mu)
-  !dt = 1.0e-4
-  Tmax = 300
-  nstep = int(Tmax / dt)
+  nstep = 100000
 
   ! We check for steady state
   event_i => e_istep
@@ -50,10 +48,10 @@ contains
 
     do j = 1,ny
       do i = 2,nx
-        uold(i,j) = u(i,j)
+        uold(i,j) = u%f(i,j)
       end do
     end do
-    
+
   end subroutine e_istep
     
   subroutine output()
@@ -61,7 +59,7 @@ contains
     implicit none
     
     ! Check for steady-state
-    real :: diff, uc, vc, diffmax
+    real :: diff, uc, vc, diffmax, vort
     logical :: steady
     integer :: i, j, out_id, xprof, yprof
     
@@ -70,8 +68,8 @@ contains
  
     do j = 1,ny
       do i = 2,nx
-        diff = abs(u(i,j) - uold(i,j))
-        if (diff > 1.0e-8) steady = .false.
+        diff = abs(u%f(i,j) - uold(i,j))
+        if (diff > 1.0e-5) steady = .false.
         if (diff > diffmax) diffmax = diff
       end do
     end do
@@ -84,14 +82,14 @@ contains
       open(newunit = xprof, file = 'xprof')
       i = nx / 2
       do j = 1,ny
-        write(xprof,*) y(i,j), u(i,j)
+        write(xprof,*) y(i,j), 0.5*(u%f(i,j) + u%f(i-1,j))
       end do
       close(xprof)
 
       open(newunit = yprof, file = 'yprof')
       j = ny / 2
       do i = 1,nx
-        write(yprof,*) x(i,j), v(i,j)
+        write(yprof,*) x(i,j), 0.5*(v%f(i,j)+v%f(i,j+1))
       end do
       close(yprof)
 
@@ -99,9 +97,12 @@ contains
       open(newunit = out_id, file = 'out')
       do j = 1,ny
         do i = 1,nx
-          uc = 0.5*(u(i,j) + u(i+1,j))
-          vc = 0.5*(v(i,j) + v(i,j+1))
-          write(out_id,*) i, j, sqrt(uc**2 + vc**2)
+          uc = 0.5*(u%f(i,j) + u%f(i+1,j))
+          vc = 0.5*(v%f(i,j) + v%f(i,j+1))
+          vort = 0.25*(u%f(i,j+1) + u%f(i+1,j+1) - u%f(i,j-1) - u%f(i+1,j-1)) / dx - &
+              0.25*(v%f(i+1,j) + v%f(i+1,j) - v%f(i-1,j+1) - v%f(i-1,j+1)) / dy
+          
+          write(out_id,*) i, j, sqrt(uc**2 + vc**2), p%f(i,j), vort
         end do
         write(out_id,*) ''
       end do
