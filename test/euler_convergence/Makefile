@@ -40,4 +40,4 @@ plot:
 	gnuplot plot.pl
 
 clean:
-	rm -r *.o *.mod euler_convergence log error fit.log plot.png
+	rm -r *.o *.mod euler_convergence log error fit.log plot.png ke*

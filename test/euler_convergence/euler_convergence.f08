@@ -4,9 +4,10 @@ program euler
   include "navier_stokes.h"
 
   implicit none
-  integer :: i, j, n
+  integer :: i, j, n, keid
   real :: xl, yl
   character(len=4) :: arg
+  character(len=6) :: filename
   
   ! Boundary conditions
   left_boundary = 'periodic'
@@ -57,13 +58,32 @@ program euler
   nstep = int(Tmax / dt)
 
   ! We compute the error at the end of the simulation
+  filename = trim('ke'//arg)
+  open(newunit = keid, file = filename)
+  event_i => ket
   event_end => output_error
 
   ! We run the simulation
   call solve()
 
 contains
-  
+
+  subroutine ket()
+    ! Compute time history of the kinetic energy
+    real :: uc, vc, ke
+
+    ke = 0.0
+    do j = 1,ny
+      do i = 1,nx
+        uc = 0.5*(u%f(i+1,j) + u%f(i,j))
+        vc = 0.5*(v%f(i,j) + v%f(i,j+1))
+        ke = ke + uc**2 + vc**2
+      end do
+    end do
+    write(keid,*) t, ke/float(nx*ny) 
+  end subroutine ket
+
+    
   subroutine output_error()
     
     ! Compute the error with respect to the analytical solution

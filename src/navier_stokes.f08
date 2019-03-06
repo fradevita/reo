@@ -13,7 +13,7 @@ module navier_stokes
   use navier_stokes_pub
   include 'mpif.h'
 
-  !type(field) :: us, vs, phi
+  type(field) :: us, vs, phi
 
   private
   public :: init_ns_solver, solve, destroy_ns_solver
@@ -583,6 +583,8 @@ contains
     maximum_divergence = 0.0
     maximum_CFL = 0.0
 
+    divergence_tol = tolerance
+    
     do j = 1,ny
       do i = 1,nx
         ! Check divergence
@@ -600,11 +602,11 @@ contains
     end do
 
     if (maximum_divergence > divergence_tol) then
-      print *, 'WARNING: divergence is ', maximum_divergence, 'at istep:', istep, &
+      write(log,*) 'WARNING: divergence is ', maximum_divergence, 'at istep:', istep, &
           'in :', imax, jmax
     endif
 
-    if (maximum_CFL > 0.8) print *, 'WARNING: CFL is:', maximum_CFL 
+    if (maximum_CFL > 0.8) write(log,*) 'WARNING: CFL is:', maximum_CFL 
 
   end subroutine check
   !===============================================================================
