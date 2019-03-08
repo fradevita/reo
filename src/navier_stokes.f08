@@ -13,7 +13,7 @@ module navier_stokes
   use navier_stokes_pub
   include 'mpif.h'
 
-  type(field) :: us, vs, phi
+  !type(field) :: us, vs, phi
 
   private
   public :: init_ns_solver, solve, destroy_ns_solver
@@ -233,18 +233,18 @@ contains
     allocate(p%b(p%lo(1)-1:p%up(1)+1))
     allocate(p%t(p%lo(1)-1:p%up(1)+1))
 
-    allocate(us%l(us%lo(2)-1:u%up(2)+1))
-    allocate(us%r(us%lo(2)-1:u%up(2)+1))
-    allocate(us%t(us%lo(1)-1:u%up(1)+1))
-    allocate(us%b(us%lo(1)-1:u%up(1)+1))
-    allocate(vs%l(vs%lo(2)-1:v%up(2)+1))
-    allocate(vs%r(vs%lo(2)-1:v%up(2)+1))
-    allocate(vs%t(vs%lo(1)-1:v%up(1)+1))
-    allocate(vs%b(vs%lo(1)-1:v%up(1)+1))
-    allocate(phi%l(phi%lo(2)-1:p%up(2)+1))
-    allocate(phi%r(phi%lo(2)-1:p%up(2)+1))
-    allocate(phi%b(phi%lo(2)-1:p%up(1)+1))
-    allocate(phi%t(phi%lo(2)-1:p%up(1)+1))
+    allocate(us%l(us%lo(2)-1:us%up(2)+1))
+    allocate(us%r(us%lo(2)-1:us%up(2)+1))
+    allocate(us%t(us%lo(1)-1:us%up(1)+1))
+    allocate(us%b(us%lo(1)-1:us%up(1)+1))
+    allocate(vs%l(vs%lo(2)-1:vs%up(2)+1))
+    allocate(vs%r(vs%lo(2)-1:vs%up(2)+1))
+    allocate(vs%t(vs%lo(1)-1:vs%up(1)+1))
+    allocate(vs%b(vs%lo(1)-1:vs%up(1)+1))
+    allocate(phi%l(phi%lo(2)-1:phi%up(2)+1))
+    allocate(phi%r(phi%lo(2)-1:phi%up(2)+1))
+    allocate(phi%b(phi%lo(2)-1:phi%up(1)+1))
+    allocate(phi%t(phi%lo(2)-1:phi%up(1)+1))
 
     u%l = 0.0
     u%r = 0.0
@@ -271,14 +271,14 @@ contains
     phi%r = 0.0
     phi%t = 0.0
     phi%b = 0.0
-        
+
     ! We set all the field to zero
-    p%f = 0.0
-    phi%f = 0.0
     u%f = 0.0
-    us%f = 0.0
     v%f = 0.0
+    p%f = 0.0
+    us%f = 0.0
     vs%f = 0.0
+    phi%f = 0.0
 
     ! Set field type
     u%location = 1
@@ -336,7 +336,9 @@ contains
     implicit none
 
     integer :: istep, i, j
-    real :: du_o(nx+1,ny), dv_o(nx,ny+1), rhs(nx*ny)
+    real    :: du_o(u%lo(1):u%up(1),u%lo(2):u%up(2))
+    real    :: dv_o(v%lo(1):v%up(1),v%lo(2):v%up(2))
+    real    :: rhs(nx*ny)
 
     ! We need to overwrtie the boundary on the projected field and operator with that
     ! on velocity and pressure
@@ -352,7 +354,7 @@ contains
     phi%r = p%r
     phi%t = p%t
     phi%b = p%b
-    
+
     ! First apply the boundary conditions on the initial fields
     call boundary(u)
     call boundary(v)
@@ -384,7 +386,7 @@ contains
       ! We compute the RHS of the poisson equation and store it in the
       ! array rhs
       call poisson_rhs(rhs)
-
+      
       ! Then we solve the poisson equation for the projector operator
       call solve_poisson(rhs)
 
@@ -402,7 +404,6 @@ contains
 
       ! We update the pressure
       p%f = p%f + phi%f
-      !p%f = p%f - p%f(1,1)
       call boundary(p)
 
       ! Check divergence of the velocity field and CFL
@@ -423,7 +424,8 @@ contains
   !===============================================================================
   subroutine updates(du, dv)
 
-    real, intent(inout) :: du(:,:), dv(:,:)
+    real, intent(inout) :: du(u%lo(1):u%up(1),u%lo(2):u%up(2))
+    real, intent(inout) :: dv(v%lo(1):v%up(1),v%lo(2):v%up(2))
 
     integer :: i, j, ip, im, jp, jm
     real :: uuip, uuim, uvjp, uvjm, uvip, uvim, vvjp, vvjm
@@ -443,6 +445,7 @@ contains
         uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
         uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
         uvjm  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j)  )
+
         du(i,j) = (-uuip + uuim) / dx + (-uvjp + uvjm) / dy + &
             mu*((u%f(ip,j) - 2.0*u%f(i,j) + u%f(im,j))/dxq + &
             (u%f(i,jp) - 2.0*u%f(i,j) + u%f(i,jm))/dyq)
@@ -477,10 +480,14 @@ contains
 #endif
 
     implicit none
-    real, intent(inout) :: du_o(:,:), dv_o(:,:)
+    real, intent(inout) :: du_o(u%lo(1):u%up(1),u%lo(2):u%up(2))
+    real, intent(inout) :: dv_o(v%lo(1):v%up(1),v%lo(2):v%up(2))
 
+    ! Local variables
     integer :: i, j
-    real :: du(nx+1,ny), dv(nx,ny+1), rhs
+    real    :: du(u%lo(1):u%up(1),u%lo(2):u%up(2))
+    real    :: dv(v%lo(1):v%up(1),v%lo(2):v%up(2))
+    real    :: rhs
 
     ! Compute the new RHS of momentum equation
     call updates(du, dv)
@@ -528,12 +535,12 @@ contains
 
     implicit none
 
-    real, dimension(:), intent(inout) :: rhs
+    real, intent(inout) :: rhs(nx*ny)
 
     integer :: i, j
 
-    do j = 1,ny
-      do i = 1,nx
+    do j = p%lo(2),p%up(2)
+      do i = p%lo(1),p%up(1)
         rhs(i+(j-1)*ny) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
             (vs%f(i,j+1) - vs%f(i,j)) / dy )
       end do
@@ -584,7 +591,7 @@ contains
     maximum_CFL = 0.0
 
     divergence_tol = tolerance
-    
+
     do j = 1,ny
       do i = 1,nx
         ! Check divergence

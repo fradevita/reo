@@ -47,7 +47,7 @@ contains
           f%f(f%up(1)+1,j) = 2.0*f%r(j) - f%f(f%up(1),j)
         end do
       else
-        print *, 'ERROR 6', f%right
+        print *, 'ERROR 6'
         stop
       end if
 
@@ -83,7 +83,7 @@ contains
           f%f(i,f%lo(2)-1) = 2.0*f%b(i) - f%f(i,f%lo(2))
         end do
       else
-        print *, 'ERROR 7'
+        print *, 'ERROR 8'
         stop
       end if
 
@@ -95,13 +95,16 @@ contains
           f%f(f%lo(1)-1,j) = f%f(f%lo(1)+1,j)
         end do
       elseif (f%left == 'periodic') then
-        do j = f%lo(2),f%up(2)+1
+        do j = f%lo(2)-1,f%up(2)+1
           f%f(f%lo(1)-1,j) = f%f(f%up(1),j)
         end do
-      else ! dirichlet
+      elseif (f%left == 'dirichlet') then
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%lo(1)-1,j) = f%l(j)
         end do
+      else
+        print *, 'ERROR 9'
+        stop
       end if
 
       ! Right boundary
@@ -113,10 +116,13 @@ contains
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%up(1)+1,j) = f%f(f%lo(1),j)
         end do
-      else !dirichlet
+      elseif (f%right == 'dirichlet') then
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%up(1)+1,j) = f%r(j)
         end do
+      else
+        print *, 'ERROR 10'
+        stop
       end if
 
       ! Top boundary
@@ -128,10 +134,13 @@ contains
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%up(2)+1) = f%f(i,f%lo(2))
         end do
-      else !dirichlet
+      elseif (f%top == 'dirichlet') then
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%up(2)+1) = 2.0*f%t(i) - f%f(i,f%up(2))
         end do
+      else
+        print *, 'ERROR 11'
+        stop
       end if
 
       ! Bottom boundary
@@ -143,10 +152,13 @@ contains
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%lo(2)-1) = f%f(i,f%up(2))
         end do
-      else !dirichlet
+      elseif( f%bottom == 'dirichlet') then
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%lo(2)-1) = 2.0*f%b(i) - f%f(i,f%lo(2))
         end do
+      else
+        print *, 'ERROR 12'
+        stop
       end if
 
     case(2) ! y face
@@ -160,10 +172,12 @@ contains
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%lo(1)-1,j) = f%f(f%up(1),j)
         end do
-      else !dirichlet
+      elseif (f%left == 'dirichlet') then
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%lo(1)-1,j) = 2.0*f%l(j) - f%f(f%lo(1),j)
         end do
+      else
+        print *, 'ERROR 13'
       end if
 
       ! Right boundary
@@ -175,10 +189,13 @@ contains
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%up(1)+1,j) = f%f(f%lo(1),j)
         end do
-      else !dirichlet
+      elseif (f%right == 'dirichlet') then
         do j = f%lo(2)-1,f%up(2)+1
           f%f(f%up(1)+1,j) = 2.0*f%r(j) - f%f(f%up(1),j)
         end do
+      else
+        print *, 'ERROR 14'
+        stop
       end if
 
       ! Top boundary
@@ -190,10 +207,13 @@ contains
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%up(2)+1) = f%f(i,f%lo(2))
         end do
-      else !dirichlet
+      elseif (f%top == 'dirichlet') then
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%up(2)+1) = 2.0*f%t(i)
         end do
+      else
+        print *, 'ERROR 15'
+        stop
       end if
 
       ! Bottom boundary
@@ -205,10 +225,13 @@ contains
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%lo(2)-1) = f%f(i,f%up(2))
         end do
-      else !dirichlet
+      elseif (f%bottom == 'dirichlet') then
         do i = f%lo(1)-1,f%up(1)+1
           f%f(i,f%lo(2)-1) = 2.0*f%b(i)
         end do
+      else
+        print *, 'ERROR 16'
+        stop
       end if
 
     end select

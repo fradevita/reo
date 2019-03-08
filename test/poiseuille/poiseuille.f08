@@ -18,6 +18,7 @@ program poiseuille
   ! Set the number of points and the domain size
   call getarg(1,arg)
   read(arg,*) n
+  print *, n
   nx = 2**n
   ny = 2**n
   Lx = 1.0
@@ -54,8 +55,8 @@ contains
   
   subroutine e_istep()
 
-    do j = 1,ny
-      do i = 1,nx+1
+    do j = u%lo(2),u%up(2)
+      do i = u%lo(1),u%up(1)
         uold(i,j) = u%f(i,j)
       end do
     end do
@@ -73,8 +74,8 @@ contains
     
     steady = .true.
     
-    do j = 1,ny
-      do i = 1,nx+1
+    do j = u%lo(2),u%up(2)
+      do i = u%lo(1),u%up(1)
         diff = abs(u%f(i,j) - uold(i,j))
         if (diff > 1.0e-8) steady = .false.
       end do
@@ -83,8 +84,8 @@ contains
     if (steady) then
       emax = 0.0
       ! Compute the error with respect to the analytical profile
-      do j = 1,ny
-        do i = 1,nx
+      do j = u%lo(2),u%up(2)
+        do i = u%lo(1),u%up(1)-1
           s = 0.5*(0.25 - (y(i,j))**2)
           e = abs(s-u%f(i,j))
           if (e > emax) then

@@ -350,10 +350,10 @@ contains
         if (phi_u(i,j) > 0.0) then ! On liquid side of the interface
           if (norm_u(i,j,1) > 0.0) then
             xl = (-b + sqrt(b**2 - 4.0*c))*0.5
-            vx = u(i+1,j)*(xx-xl)/(xx+dx-xl)
+            vx = u%f(i+1,j)*(xx-xl)/(xx+dx-xl)
           else
             xl = (-b - sqrt(b**2 - 4.0*c))*0.5
-            vx = u(i-1,j)*(xx-xl)/(xx-dx-xl)
+            vx = u%f(i-1,j)*(xx-xl)/(xx-dx-xl)
           endif
         else
           vx = 0.0
@@ -371,10 +371,10 @@ contains
         if (phi_u(i,j) > 0.0) then ! On liquid side
           if (norm_u(i,j,2) > 0.0) then
             yl = (-b + sqrt(b**2 - 4*c))*0.5
-            vy = u(i,j+1)*(yy-yl)/(yy+dy-yl)
+            vy = u%f(i,j+1)*(yy-yl)/(yy+dy-yl)
           else
             yl = (-b - sqrt(b**2 - 4*c))*0.5
-            vy = u(i,j-1)*(yy-yl)/(yy-dy-yl)
+            vy = u%f(i,j-1)*(yy-yl)/(yy-dy-yl)
           endif
         else
           vy = 0.0
@@ -405,10 +405,10 @@ contains
         if (phi_v(i,j) >0.0) then ! On liquid side
           if (norm_v(i,j,1) > 0.0) then
             xl = (-b + sqrt(b**2 - 4*c))*0.5
-            vx = v(i+1,j)*(xx-xl)/(xx+dx-xl)
+            vx = v%f(i+1,j)*(xx-xl)/(xx+dx-xl)
           else
             xl = (-b - sqrt(b**2 - 4*c))*0.5
-            vx = v(i-1,j)*(xx-xl)/(xx-dx-xl)
+            vx = v%f(i-1,j)*(xx-xl)/(xx-dx-xl)
           endif
         else
           vx = 0.0
@@ -426,10 +426,10 @@ contains
         if(phi_v(i,j) > 0.0) then ! On liquid side
           if (norm_v(i,j,2) > 0.0) then
             yl = (-b + sqrt(b**2 - 4*c))*0.5
-            vy = v(i,j+1)*(yy-yl)/(yy+dy-yl)
+            vy = v%f(i,j+1)*(yy-yl)/(yy+dy-yl)
           else
             yl = (-b - sqrt(b**2 - 4*c))*0.5
-            vy = v(i,j-1)*(yy-yl)/(yy-dy-yl)
+            vy = v%f(i,j-1)*(yy-yl)/(yy-dy-yl)
           endif
         else
           vy = 0.0

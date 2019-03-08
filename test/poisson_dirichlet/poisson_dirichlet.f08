@@ -20,6 +20,7 @@ program poisson_dirichlet
   mpi_common_world = MPI_COMM_WORLD
 
   do n = 3,8
+
     ! We set the number of points and the domain size
     nx = 2**n
     ny = 2**n

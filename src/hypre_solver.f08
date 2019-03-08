@@ -9,8 +9,8 @@ module hypre_solver
 
   ! Define some properties of the solver
   integer :: verbose = 0, periodic(2) = [0, 0]
-  real :: tolerance = 1.0e-3
-  
+  real :: tolerance = 1.0e-6
+
   private
   public :: init_hypre_solver, solve_poisson, destroy_hypre_solver, &
             tolerance, verbose, periodic
@@ -27,6 +27,8 @@ contains
     real :: delta
     real, dimension(:), allocatable :: values
 
+    !character*32 :: matfile
+    
     ! **** 1. Create the grid object ****
     call HYPRE_StructGridCreate(mpi_common_world, 2, grid, ierr)
     call HYPRE_StructGridSetPeriodic(grid, periodic, ierr)
@@ -109,7 +111,8 @@ contains
       end if
 
       ! Neumann
-      if (left_boundary == 'no-slip' .or. left_boundary == 'free-slip') then
+      if (left_boundary == 'no-slip' .or. left_boundary == 'free-slip' .or. &
+          left_boundary == 'inflow') then
         do i = 1,ny
           if (i == 1 .or. i == ny) then
             values(i) = -2.0 / (delta**2)
@@ -153,7 +156,7 @@ contains
           end if
         end do
       end if
-      
+
       stencil_indices(1) = 0
       call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
                                           stencil_indices, values, ierr)
@@ -236,10 +239,29 @@ contains
            stencil_indices, values, ierr)
       deallocate(values, stencil_indices)
     end if
+
+    ! Corners
+    ilower = [nx, 1]
+    iupper = [nx, 1]
+    allocate(values(1))
+    allocate(stencil_indices(1))
+    stencil_indices(1) = 0
+    values(1) = -4.0 / delta**2
+    call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
+        stencil_indices, values, ierr)    
+    ilower = [nx, ny]
+    iupper = [nx, ny]
+    call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
+        stencil_indices, values, ierr)
+    deallocate(values,stencil_indices)
     
     ! This is a collective call finalizing the matrix assembly.
     ! The matrix is now ``ready to be used''
     call HYPRE_StructMatrixAssemble(A, ierr)
+
+!    matfile = 'matrix'
+!    matfile(7:7) = char(0)
+!    call HYPRE_StructMatrixPrint(matfile, A, 0, ierr)
 
     ! Create an empty vector object
     call HYPRE_StructVectorCreate(mpi_common_world, grid, b, ierr)
@@ -250,10 +272,18 @@ contains
     call HYPRE_StructVectorInitialize(d, ierr)
 
     ! Create a PCG solver
-    call HYPRE_StructPCGCreate(mpi_common_world, solver, ierr)
-    call HYPRE_StructPCGSetTol(solver, tolerance, ierr) ! convergence tolerance
-    call HYPRE_StructPCGSetPrintLevel(solver, verbose, ierr) ! amount of info. printed
-    
+   call HYPRE_StructPCGCreate(mpi_common_world, solver, ierr)
+   call HYPRE_StructPCGSetTol(solver, tolerance, ierr) ! convergence tolerance
+   call HYPRE_StructPCGSetPrintLevel(solver, verbose, ierr) ! amount of info. printed
+
+    ! call HYPRE_StructSMGCreate(mpi_common_world, solver, ierr)
+    ! call HYPRE_StructSMGSetMemoryUse(solver, 0, ierr)
+    ! call HYPRE_StructSMGSetMaxIter(solver,50,ierr)
+    ! call HYPRE_StructSMGSetRelChange(solver, 0, ierr)
+    ! call HYPRE_StructSMGSetNumPreRelax(solver, 1, ierr)
+    ! call HYPRE_StructSMGSetNumPostRelax(solver, 1, ierr)
+    ! call HYPRE_StructSMGSetLogging(solver,1, ierr)
+
   end subroutine init_hypre_solver
   
   subroutine solve_poisson(rhs)
@@ -270,7 +300,7 @@ contains
     
     implicit none
 
-    integer :: i, ilower(2), iupper(2)
+    integer :: i, ilower(2), iupper(2),  num_iterations
     real :: mean
     real, dimension(:), intent(inout) :: rhs
 
@@ -287,6 +317,10 @@ contains
     call HYPRE_StructPCGSetup(solver, A, d, b, ierr)
     call HYPRE_StructPCGSolve(solver, A, d, b, ierr)
 
+    !call HYPRE_StructSMGSetup(solver, A, d, b, ierr)
+    !call HYPRE_StructSMGSolve(solver, A, d, b, ierr)
+    !call HYPRE_StructSMGGetNumIterations(solver,num_iterations,ierr)
+   
     ! Save the solution of the Poisson equation inside the rhs array
     call HYPRE_StructVectorGetBoxValues(b, ilower, iupper, rhs, ierr)
     
@@ -315,7 +349,7 @@ contains
     call HYPRE_StructVectorDestroy(b, ierr)
     call HYPRE_StructVectorDestroy(d, ierr)
     call HYPRE_StructPCGDestroy(solver, ierr)
-
+    !call HYPRE_StructSMGDestroy(solver,ierr)
   end subroutine destroy_hypre_solver
 
 end module hypre_solver

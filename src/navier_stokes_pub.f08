@@ -34,7 +34,7 @@ module navier_stokes_pub
     integer, dimension(2) :: lo, up
   end type field
 
-  type(field) :: u, v, p
+  type(field) :: u, v, p, us, vs, phi
 
   ! Source term in momentum equation
   real :: Sx = 0.0, Sy = 0.0
