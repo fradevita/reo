@@ -1,4 +1,4 @@
-set term pngcairo
+set term png
 set output 'xprof.png'
 set xl 'x'
 set yl 'u'
