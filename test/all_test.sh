@@ -25,7 +25,7 @@ make poisson_dirichlet
 echo "Running poisson dirichlet test"
 ./poisson_dirichlet
 make plot
-display plot.png
+open plot.png
 cd ..
 
 # Run the test for the poisson equation with periodic boundary conditinos
@@ -34,7 +34,7 @@ make poisson_periodic
 echo "Running poisson periodic test"
 ./poisson_periodic
 make plot
-display plot.png
+open plot.png
 cd ..
 
 # Run the test for the convergence of euler equation
@@ -42,7 +42,7 @@ cd euler_convergence
 make euler_convergence
 echo "Running euler convergence test"
 sh euler_convergence.sh
-display plot.png
+open plot.png
 cd ..
 
 # Run the test for poiseuille
@@ -50,7 +50,7 @@ cd poiseuille
 make poiseuille
 echo "Running poiseuille test"
 sh poiseuille.sh
-display plot.png
+open plot.png
 cd ..
 
 # Run the driven cavity test
@@ -59,7 +59,7 @@ make lid
 echo "Running lid driven cavity test"
 ./lid
 make plot
-display *.png
+open *.png
 cd ..
 
 echo "DONE"
