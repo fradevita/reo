@@ -1,10 +1,10 @@
 ### Next things to implement (not ordered)
 
+- [x] Generalized boundary conditions
 - [ ] Multiblock version
-- [ ] Immersed Boundary Method
 - [ ] Parrallel version
+- [ ] Immersed Boundary Method
 - [ ] Volume of Fluid
 - [ ] 3D version
-- [ ] Generalized boundary conditions
 - [ ] VTK output
 - [ ] Local compilation in hidden subdirectories (like .mod .o)

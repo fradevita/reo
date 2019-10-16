@@ -36,7 +36,7 @@ program poisson_periodic
     call create_grid()
 
     ! Then we initialize the hypre solver
-    call init_hypre_solver()
+    call init_hypre_solver('periodic','periodic','periodic','periodic')
 
     ! We give the RHS of the poisson equation
     allocate(rhs(nx*ny))

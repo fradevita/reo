@@ -17,9 +17,14 @@ module hypre_solver
   
 contains
   
-  subroutine init_hypre_solver()
+  subroutine init_hypre_solver(left,right,top,bottom)
 
     implicit none
+
+    ! Type of BC
+    character(len=9), intent(in) :: left, right, top, bottom
+
+    ! Local variables
     integer :: entry, i, j, nentries, nvalues
     integer, dimension(2) :: ilower, iupper
     integer, dimension(5,2) :: offsets
@@ -84,7 +89,7 @@ contains
                                         stencil_indices, values, ierr)
     deallocate(values, stencil_indices)
     
-    ! Set the coefficients outside of the domain
+    ! Set the coefficients outside of the domain and on the boundaries
 
     if (periodic(1) == 0) then
       ! Values on the left of the box
@@ -100,28 +105,20 @@ contains
            stencil_indices, values, ierr)
 
       ! Dirichlet
-      if (left_boundary == 'outflow') then
+      if (left == 'dirichlet') then
         do i = 1,ny
-          if (i == 1 .or. i == ny) then
-            values(i) = -6.0 / (delta**2)
-          else
-            values(i) = -5.0 / (delta**2)
-          end if
+          values(i) = -5.0 / (delta**2)
         end do
+      elseif (left == 'neumann') then 
+        do i = 1,ny
+          values(i) = -3.0 / (delta**2)
+        end do
+      elseif (left == 'periodic') then
+        ! do nothing
+      else
+        print *, 'WRONG LEFT BC HYPRE'
       end if
 
-      ! Neumann
-      if (left_boundary == 'no-slip' .or. left_boundary == 'free-slip' .or. &
-          left_boundary == 'inflow') then
-        do i = 1,ny
-          if (i == 1 .or. i == ny) then
-            values(i) = -2.0 / (delta**2)
-          else
-            values(i) = -3.0 / (delta**2)
-          end if
-        end do
-      end if
-      
       stencil_indices(1) = 0
       call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
                                           stencil_indices, values, ierr)
@@ -136,25 +133,18 @@ contains
       call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
                                           stencil_indices, values, ierr)
       ! Dirichlet
-      if (right_boundary == 'outflow') then
+      if (right == 'dirichlet') then
         do i = 1,ny
-          if (i == 1 .or. i == ny) then
-            values(i) = -6.0 / (delta**2)
-          else
-            values(i) = -5.0 / (delta**2)
-          end if
+          values(i) = -5.0 / (delta**2)
         end do
-      end if
-
-      ! Neumann
-      if (right_boundary == 'no-slip' .or. right_boundary == 'free-slip') then
+      elseif (right == 'neumann') then
         do i = 1,ny
-          if (i == 1 .or. i == ny) then
-            values(i) = -2.0 / (delta**2)
-          else
-            values(i) = -3.0 / (delta**2)
-          end if
+          values(i) = -3.0 / (delta**2)
         end do
+      elseif (right == 'periodic') then
+        ! do nothing
+      else
+        print *, 'WRONG RIGTH BC HYPRE'
       end if
 
       stencil_indices(1) = 0
@@ -177,25 +167,18 @@ contains
            stencil_indices, values, ierr)
 
       ! Dirichlet
-      if (bottom_boundary == 'outflow') then
+      if (bottom == 'dirichlet') then
         do i = 1,nx
-          if (i == 1 .or. i == nx) then
-            values(i) = -6.0 / (delta**2)
-          else
-            values(i) = -5.0 / (delta**2)
-          end if
+          values(i) = -5.0 / (delta**2)
         end do
-      endif
-
-      ! Neumann
-      if (bottom_boundary == 'no-slip' .or. bottom_boundary == 'free-slip') then
+      elseif (bottom == 'neumann') then
         do i = 1,nx
-          if (i == 1 .or. i == nx) then
-            values(i) = -2.0 / (delta**2)
-          else
-            values(i) = -3.0 / (delta**2)
-          end if
+          values(i) = -3.0 / (delta**2)
         end do
+      elseif (bottom == 'periodic') then
+        ! do nothing
+      else
+        print *, 'WRONG BOTTOM BC HYPRE'
       end if
 
       stencil_indices(1) = 0
@@ -213,25 +196,18 @@ contains
            stencil_indices, values, ierr)
 
       ! Dirichlet
-      if (top_boundary == 'outflow') then
+      if (top == 'dirichlet') then
         do i = 1,nx
-          if (i == 1 .or. i == nx) then
-            values(i) = -6.0 / (delta**2)
-          else
-            values(i) = -5.0 / (delta**2)
-          end if
+          values(i) = -5.0 / (delta**2)
         end do
-      end if
-
-      ! Neumann
-      if (top_boundary == 'no-slip' .or. top_boundary == 'free-slip') then
+      elseif (top == 'neumann') then
         do i = 1,nx
-          if (i == 1 .or. i == nx) then
-            values(i) = -2.0 / (delta**2)
-          else
-            values(i) = -3.0 / (delta**2)
-          end if
+          values(i) = -3.0 / (delta**2)
         end do
+      elseif (top == 'periodic') then
+        ! do nothing
+      else
+        print *, 'WRONG TOP BC HYPRE'
       end if
 
       stencil_indices(1) = 0
@@ -241,16 +217,54 @@ contains
     end if
 
     ! Corners
-    ilower = [nx, 1]
-    iupper = [nx, 1]
+    ilower = [1, 1]
+    iupper = [1, 1]
     allocate(values(1))
     allocate(stencil_indices(1))
     stencil_indices(1) = 0
-    values(1) = -4.0 / delta**2
+    if (left == 'dirichlet' .and. bottom == 'dirichlet') then
+      values(1) = -6.0 / delta**2
+    elseif (left == 'neumann' .and. bottom == 'neumann') then
+      values(1) = -2.0 / delta**2
+    else
+      values(1) = -4.0 / delta**2
+    end if
+    call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
+        stencil_indices, values, ierr)    
+    ilower = [1, ny]
+    iupper = [1, ny]
+    stencil_indices(1) = 0
+    if (left == 'dirichlet' .and. top == 'dirichlet') then
+      values(1) = -6.0 / delta**2
+    elseif (left == 'neumann' .and. top == 'neumann') then
+      values(1) = -2.0 / delta**2
+    else
+      values(1) = -4.0 / delta**2
+    end if
+    call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
+        stencil_indices, values, ierr)    
+    ilower = [nx, 1]
+    iupper = [nx, 1]
+    stencil_indices(1) = 0
+    if (right == 'dirichlet' .and. bottom == 'dirichlet') then
+      values(1) = -6.0 / delta**2
+    elseif (right == 'neumann' .and. bottom == 'neumann') then
+      values(1) = -2.0 / delta**2
+    else
+      values(1) = -4.0 / delta**2
+    end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)    
     ilower = [nx, ny]
     iupper = [nx, ny]
+    stencil_indices(1) = 0
+    if (right == 'dirichlet' .and. top == 'dirichlet') then
+      values(1) = -6.0 / delta**2
+    elseif (right == 'neumann' .and. top == 'neumann') then
+      values(1) = -2.0 / delta**2
+    else
+      values(1) = -4.0 / delta**2
+    end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)
     deallocate(values,stencil_indices)

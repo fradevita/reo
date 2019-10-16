@@ -45,7 +45,15 @@ sh euler_convergence.sh
 open plot.png
 cd ..
 
-# Run the test for poiseuille
+# Run the test for poiseuille periodic
+cd poiseuille
+make poiseuille
+echo "Running poiseuille test"
+sh poiseuille.sh
+open plot.png
+cd ..
+
+# Run the test for poiseuille inflow / outflow
 cd poiseuille
 make poiseuille
 echo "Running poiseuille test"

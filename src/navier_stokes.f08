@@ -23,10 +23,6 @@ contains
   !===============================================================================
   subroutine init_ns_solver
 
-#ifdef IBM
-    use ibm, only : ibm_init
-#endif
-
     implicit none
 
     ! Initialize MPI
@@ -310,12 +306,7 @@ contains
     endif
 
     ! Create the hypre solver for the poisson equation
-    call init_hypre_solver
-
-    ! If using IBM initialize solid bodies
-#ifdef IBM
-    call ibm_init()
-#endif
+    call init_hypre_solver(p%left,p%right,p%top,p%bottom)
 
   end subroutine init_ns_solver
   !===============================================================================
@@ -328,10 +319,6 @@ contains
     ! Because we are using Adam-Bashfort we need to store the old RHS of the
     ! momentum equation: du_o and dv_o. rhs is the right-hand side of the
     ! poisson equation. Is a 1D-array of dimension nx*ny.
-
-#ifdef IBM
-    use ibm, only : ibm_tag
-#endif
 
     implicit none
 
@@ -367,11 +354,6 @@ contains
 
     open(newunit = log, file = 'log')
 
-    ! If using IBM initialize solid bodies
-#ifdef IBM
-    call ibm_tag()
-#endif
-
     ! We advance in time the solution
     do istep = 1, nstep
 
@@ -393,7 +375,7 @@ contains
       ! We copy the array rhs in the two-dimensional array phi
       do j = 1,ny
         do i = 1,nx
-          phi%f(i,j) = rhs(i + (j-1)*ny)
+          phi%f(i,j) = rhs(i + (j-1)*nx)
         end do
       end do
       call boundary(phi)
@@ -440,7 +422,7 @@ contains
       do i = u%lo(1),u%up(1)
         ip = i + 1
         im = i - 1
-        ! x direction
+
         uuip  = 0.25 * ( u%f(ip,j) + u%f(i,j) ) * ( u%f(ip,j) + u%f(i,j)  )
         uuim  = 0.25 * ( u%f(im,j) + u%f(i,j) ) * ( u%f(im,j) + u%f(i,j)  )
         uvjp  = 0.25 * ( u%f(i,jp) + u%f(i,j) ) * ( v%f(i,jp) + v%f(im,jp))
@@ -458,7 +440,7 @@ contains
       do i = v%lo(1),v%up(1)
         ip = i + 1
         im = i - 1
-        ! y direction
+
         uvip  = 0.25 * ( u%f(ip,jm) + u%f(ip,j) ) * ( v%f(i,j) + v%f(ip,j) )
         uvim  = 0.25 * ( u%f(i,jm) + u%f(i,j) ) * ( v%f(i,j) + v%f(im,j) )
         vvjp  = 0.25 * ( v%f(i,j) + v%f(i,jp) ) * ( v%f(i,j) + v%f(i,jp) )
@@ -474,10 +456,6 @@ contains
 
   !===============================================================================
   subroutine compute_predicted_velocity(du_o, dv_o)
-
-#ifdef IBM
-    use ibm, only : ibm_force
-#endif
 
     implicit none
     real, intent(inout) :: du_o(u%lo(1):u%up(1),u%lo(2):u%up(2))
@@ -500,10 +478,6 @@ contains
         rhs = 1.5 * du(i,j) - 0.5 * du_o(i,j) - (p%f(i,j) - p%f(i-1,j)) / (rho*dx) + Sx
         us%f(i,j) = u%f(i,j) + dt * rhs
 
-#ifdef IBM
-        us%f(i,j) = us%f(i,j) + dt * ibm_force(i,j,1,rhs,u%f(i,j),dt)
-#endif
-
       end do
     end do
 
@@ -513,10 +487,6 @@ contains
         ! y direction
         rhs = 1.5 * dv(i,j) - 0.5 * dv_o(i,j) - (p%f(i,j) - p%f(i,j-1)) / (rho*dy) + Sy
         vs%f(i,j) = v%f(i,j) + dt * rhs
-
-#ifdef IBM
-        vs%f(i,j) = vs%f(i,j) + dt * ibm_force(i,j,2,rhs,v%f(i,j),dt)  
-#endif
 
       end do
     end do
@@ -541,7 +511,7 @@ contains
 
     do j = p%lo(2),p%up(2)
       do i = p%lo(1),p%up(1)
-        rhs(i+(j-1)*ny) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
+        rhs(i+(j-1)*nx) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
             (vs%f(i,j+1) - vs%f(i,j)) / dy )
       end do
     end do
