@@ -7,4 +7,5 @@
 - [ ] Volume of Fluid
 - [ ] 3D version
 - [ ] VTK output
+- [ ] FFT Poisson Solver
 - [ ] Local compilation in hidden subdirectories (like .mod .o)

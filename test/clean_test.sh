@@ -15,6 +15,10 @@ cd poiseuille
 make clean
 cd ..
 
+cd poiseuille_io
+make clean
+cd ..
+
 cd lid
 make clean
 cd ..

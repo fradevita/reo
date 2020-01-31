@@ -12,4 +12,4 @@ Set enviormental variable REO as
 
 `source ~/.bashrc`
 
-Set enviormental variable HYPRE_DIR to the installation directory of HYPRE library
+Set enviormental variable HYPRE_DIR to the installation directory of HYPRE library.

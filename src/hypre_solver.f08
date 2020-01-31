@@ -22,7 +22,8 @@ contains
     implicit none
 
     ! Type of BC
-    character(len=9), intent(in) :: left, right, top, bottom
+    !character(len=9), intent(in) :: left, right, top, bottom
+    character(len=*), intent(in) :: left, right, top, bottom
 
     ! Local variables
     integer :: entry, i, j, nentries, nvalues
