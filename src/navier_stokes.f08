@@ -268,7 +268,7 @@ contains
     phi%t = 0.0
     phi%b = 0.0
 
-    ! We set all the field to zero
+    ! Set all the field to zero
     u%f = 0.0
     v%f = 0.0
     p%f = 0.0
@@ -368,7 +368,7 @@ contains
       ! We compute the RHS of the poisson equation and store it in the
       ! array rhs
       call poisson_rhs(rhs)
-      
+
       ! Then we solve the poisson equation for the projector operator
       call solve_poisson(rhs)
 
