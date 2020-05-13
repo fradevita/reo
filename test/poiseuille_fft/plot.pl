@@ -3,7 +3,7 @@ set logscale xy
 set xlabel 'N'
 set ylabel 'max|e|'
 set grid
-set title 'Poiseuille convergence'
+set title 'Poiseuille periodic fft convergence'
 fit a*x+b 'error' u (log($1)):(log($2)) via a,b
 set term png
 set output 'plot.png'

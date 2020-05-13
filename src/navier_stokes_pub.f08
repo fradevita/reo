@@ -10,12 +10,12 @@ module navier_stokes_pub
   ! Maximum number of iteration
   integer :: nstep = 0, log
 
-  ! Maximum phisycal time
+  ! Maximum phisycal time, time step and time
   real :: Tmax, dt, t
 
   ! Phisycal parameters of the solver
   real :: mu = 1.0, rho = 1.0, g = 0.0
-  
+
   ! Variables of the solver: pressure, velocity field, 
   ! predicted velocity field and projection operator
   type field
@@ -46,5 +46,8 @@ module navier_stokes_pub
   procedure(event), pointer :: event_output => Null()
   procedure(event), pointer :: event_end => Null()
   procedure(event), pointer :: event_i => Null()
+
+  ! Flag for the Poisson solver
+  character(len=3) :: poisson_solver_type
 
 end module navier_stokes_pub

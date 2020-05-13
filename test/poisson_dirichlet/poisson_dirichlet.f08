@@ -9,7 +9,7 @@ program poisson_dirichlet
   include 'mpif.h'  
   integer :: i, j, n
   real :: s, e, emax
-  real, dimension(:), allocatable :: rhs
+  real, dimension(:,:), allocatable :: rhs
   
   open(unit = 1, file = 'error')
   
@@ -34,10 +34,10 @@ program poisson_dirichlet
     call init_hypre_solver('dirichlet','dirichlet','dirichlet','dirichlet')
 
     ! We give the RHS of the poisson equation
-    allocate(rhs(nx*ny))
+    allocate(rhs(nx,ny))
     do j = 1,ny
       do i = 1,nx
-        rhs(i + (j-1)*ny) = -pi*pi*18.*sin(3.*pi*x(i,j))*sin(3.*pi*y(i,j))
+        rhs(i,j) = -pi*pi*18.*sin(3.*pi*x(i,j))*sin(3.*pi*y(i,j))
       end do
     end do
 
@@ -45,14 +45,14 @@ program poisson_dirichlet
     tolerance = 1.0e-30
     
     ! solve the poisson equation
-    call solve_poisson(rhs)
+    call solve_poisson_hypre(rhs)
 
     ! and compute the error with analytical solution
     emax = 0.0
     do j = 1,ny
       do i = 1,nx
         s = sin(pi*3*x(i,j))*sin(pi*3*y(i,j))
-        e = abs(s - rhs(i+(j-1)*ny))
+        e = abs(s - rhs(i,j))
         if (e .gt. emax) emax = e
       end do
     end do

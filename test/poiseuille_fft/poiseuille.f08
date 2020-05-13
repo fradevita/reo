@@ -14,6 +14,9 @@ program poiseuille
   ! Boundary conditions
   left_boundary = 'periodic'
   right_boundary = 'periodic'
+
+  ! Select the Poisson solver
+  poisson_solver_type = 'fft'
   
   ! Set the number of points and the domain size
   call getarg(1,arg)

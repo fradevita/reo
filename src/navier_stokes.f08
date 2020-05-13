@@ -10,13 +10,20 @@ module navier_stokes
   use grid_2d
   use boundary_conditions
   use hypre_solver
+  use fft_solver
   use navier_stokes_pub
   include 'mpif.h'
 
-  !type(field) :: us, vs, phi
+  interface
+    subroutine poisson_solver(rhs)
+      real, intent(inout) :: rhs(:,:)
+    end subroutine
+  end interface
 
   private
   public :: init_ns_solver, solve, destroy_ns_solver
+
+  procedure(poisson_solver), pointer :: solve_poisson
 
 contains
 
@@ -305,8 +312,17 @@ contains
       periodic(2) = ny
     endif
 
-    ! Create the hypre solver for the poisson equation
-    call init_hypre_solver(p%left,p%right,p%top,p%bottom)
+    ! Select the functions for the Poisson solver
+    if (poisson_solver_type == 'itr') then
+      call init_hypre_solver(p%left,p%right,p%top,p%bottom)
+      solve_poisson => solve_poisson_hypre
+    elseif (poisson_solver_type == 'fft') then
+      call init_fft_solver(p%left,p%right,p%top,p%bottom)
+      solve_poisson => solve_poisson_fft
+    else
+      print *, 'ERROR: unkown Poisson solver'
+      call destroy_ns_solver()
+    endif
 
   end subroutine init_ns_solver
   !===============================================================================
@@ -318,14 +334,14 @@ contains
 
     ! Because we are using Adam-Bashfort we need to store the old RHS of the
     ! momentum equation: du_o and dv_o. rhs is the right-hand side of the
-    ! poisson equation. Is a 1D-array of dimension nx*ny.
+    ! poisson equation.
 
     implicit none
 
     integer :: istep, i, j
     real    :: du_o(u%lo(1):u%up(1),u%lo(2):u%up(2))
     real    :: dv_o(v%lo(1):v%up(1),v%lo(2):v%up(2))
-    real    :: rhs(nx*ny)
+    real    :: temp(nx,ny)
 
     ! We need to overwrtie the boundary on the projected field and operator with that
     ! on velocity and pressure
@@ -365,19 +381,24 @@ contains
       ! First we compute the predicted velocity field
       call compute_predicted_velocity(du_o, dv_o)
 
-      ! We compute the RHS of the poisson equation and store it in the
-      ! array rhs
-      call poisson_rhs(rhs)
+      ! We compute the RHS of the poisson equation
+      call poisson_rhs()
 
       ! Then we solve the poisson equation for the projector operator
-      call solve_poisson(rhs)
+      do j = 1,ny
+        do i = 1,nx
+          temp(i,j) = phi%f(i,j)
+        end do
+      enddo
+      call solve_poisson(temp)
 
       ! We copy the array rhs in the two-dimensional array phi
       do j = 1,ny
         do i = 1,nx
-          phi%f(i,j) = rhs(i + (j-1)*nx)
+           phi%f(i,j) = temp(i,j)
         end do
-      end do
+      enddo
+
       call boundary(phi)
 
       ! Then we project the predicted velocity field to the divergence-free
@@ -501,17 +522,15 @@ contains
   !===============================================================================
 
   !===============================================================================
-  subroutine poisson_rhs(rhs)
+  subroutine poisson_rhs()
 
     implicit none
-
-    real, intent(inout) :: rhs(nx*ny)
 
     integer :: i, j
 
     do j = p%lo(2),p%up(2)
       do i = p%lo(1),p%up(1)
-        rhs(i+(j-1)*nx) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
+        phi%f(i,j) = (rho/dt) * ((us%f(i+1,j) - us%f(i,j)) / dx + &
             (vs%f(i,j+1) - vs%f(i,j)) / dy )
       end do
     end do
@@ -605,5 +624,6 @@ contains
     stop
 
   end subroutine destroy_ns_solver
+  !===============================================================================
 
 end module navier_stokes

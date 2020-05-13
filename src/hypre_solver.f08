@@ -12,7 +12,7 @@ module hypre_solver
   real :: tolerance = 1.0e-6
 
   private
-  public :: init_hypre_solver, solve_poisson, destroy_hypre_solver, &
+  public :: init_hypre_solver, solve_poisson_hypre, destroy_hypre_solver, &
             tolerance, verbose, periodic
   
 contains
@@ -26,11 +26,11 @@ contains
     character(len=*), intent(in) :: left, right, top, bottom
 
     ! Local variables
-    integer :: entry, i, j, nentries, nvalues
+    integer :: entry, i, j, nentries, nvalues, n
     integer, dimension(2) :: ilower, iupper
     integer, dimension(5,2) :: offsets
     integer, dimension(:), allocatable :: stencil_indices
-    real :: delta
+    real :: delta2
     real, dimension(:), allocatable :: values
 
     !character*32 :: matfile
@@ -38,6 +38,8 @@ contains
     ! **** 1. Create the grid object ****
     call HYPRE_StructGridCreate(mpi_common_world, 2, grid, ierr)
     call HYPRE_StructGridSetPeriodic(grid, periodic, ierr)
+
+    ! Cycle over all the boxes in the grid
 
     ! Set grid extents for the box
     ilower = [1, 1]
@@ -54,7 +56,7 @@ contains
 
     ! Define the geometry of the stencil
     offsets = transpose(reshape([0, 0, -1, 0, 1, 0, 0, -1, 0, 1], &
-                        shape(transpose(offsets))))
+                          shape(transpose(offsets))))
     do entry = 1,5
       call HYPRE_StructStencilSetElement(stencil, entry - 1, offsets(entry,:), ierr) 
     end do
@@ -79,19 +81,18 @@ contains
     allocate(values(nvalues))
     allocate(stencil_indices(nentries))
     stencil_indices = [0, 1, 2, 3, 4]
-    delta = dx
+    delta2 = dx**2
     do i = 1,nvalues,nentries
-      values(i) = -4.0 / (delta**2)
+      values(i) = -4.0 / delta2
       do j = 1,nentries-1
-        values(i+j) = 1.0 / (delta**2)
+        values(i+j) = 1.0 / delta2
       end do
     end do
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, nentries, &
-                                        stencil_indices, values, ierr)
+                                       stencil_indices, values, ierr)
     deallocate(values, stencil_indices)
     
     ! Set the coefficients outside of the domain and on the boundaries
-
     if (periodic(1) == 0) then
       ! Values on the left of the box
       ilower = [1, 1]
@@ -108,14 +109,14 @@ contains
       ! Dirichlet
       if (left == 'dirichlet') then
         do i = 1,ny
-          values(i) = -5.0 / (delta**2)
+          values(i) = -5.0 / delta2
         end do
       elseif (left == 'neumann') then 
         do i = 1,ny
-          values(i) = -3.0 / (delta**2)
+          values(i) = -3.0 / delta2
         end do
       elseif (left == 'periodic') then
-        ! do nothing
+       ! do nothing
       else
         print *, 'WRONG LEFT BC HYPRE'
       end if
@@ -136,11 +137,11 @@ contains
       ! Dirichlet
       if (right == 'dirichlet') then
         do i = 1,ny
-          values(i) = -5.0 / (delta**2)
+          values(i) = -5.0 / delta2
         end do
       elseif (right == 'neumann') then
         do i = 1,ny
-          values(i) = -3.0 / (delta**2)
+          values(i) = -3.0 / delta2
         end do
       elseif (right == 'periodic') then
         ! do nothing
@@ -170,11 +171,11 @@ contains
       ! Dirichlet
       if (bottom == 'dirichlet') then
         do i = 1,nx
-          values(i) = -5.0 / (delta**2)
+          values(i) = -5.0 / delta2
         end do
       elseif (bottom == 'neumann') then
         do i = 1,nx
-          values(i) = -3.0 / (delta**2)
+          values(i) = -3.0 / delta2
         end do
       elseif (bottom == 'periodic') then
         ! do nothing
@@ -199,11 +200,11 @@ contains
       ! Dirichlet
       if (top == 'dirichlet') then
         do i = 1,nx
-          values(i) = -5.0 / (delta**2)
+          values(i) = -5.0 / delta2
         end do
       elseif (top == 'neumann') then
         do i = 1,nx
-          values(i) = -3.0 / (delta**2)
+          values(i) = -3.0 / delta2
         end do
       elseif (top == 'periodic') then
         ! do nothing
@@ -224,11 +225,11 @@ contains
     allocate(stencil_indices(1))
     stencil_indices(1) = 0
     if (left == 'dirichlet' .and. bottom == 'dirichlet') then
-      values(1) = -6.0 / delta**2
+      values(1) = -6.0 / delta2
     elseif (left == 'neumann' .and. bottom == 'neumann') then
-      values(1) = -2.0 / delta**2
+      values(1) = -2.0 / delta2
     else
-      values(1) = -4.0 / delta**2
+      values(1) = -4.0 / delta2
     end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)    
@@ -236,11 +237,11 @@ contains
     iupper = [1, ny]
     stencil_indices(1) = 0
     if (left == 'dirichlet' .and. top == 'dirichlet') then
-      values(1) = -6.0 / delta**2
+      values(1) = -6.0 / delta2
     elseif (left == 'neumann' .and. top == 'neumann') then
-      values(1) = -2.0 / delta**2
+      values(1) = -2.0 / delta2
     else
-      values(1) = -4.0 / delta**2
+      values(1) = -4.0 / delta2
     end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)    
@@ -248,11 +249,11 @@ contains
     iupper = [nx, 1]
     stencil_indices(1) = 0
     if (right == 'dirichlet' .and. bottom == 'dirichlet') then
-      values(1) = -6.0 / delta**2
+      values(1) = -6.0 / delta2
     elseif (right == 'neumann' .and. bottom == 'neumann') then
-      values(1) = -2.0 / delta**2
+      values(1) = -2.0 / delta2
     else
-      values(1) = -4.0 / delta**2
+      values(1) = -4.0 / delta2
     end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)    
@@ -260,11 +261,11 @@ contains
     iupper = [nx, ny]
     stencil_indices(1) = 0
     if (right == 'dirichlet' .and. top == 'dirichlet') then
-      values(1) = -6.0 / delta**2
+      values(1) = -6.0 / delta2
     elseif (right == 'neumann' .and. top == 'neumann') then
-      values(1) = -2.0 / delta**2
+      values(1) = -2.0 / delta2
     else
-      values(1) = -4.0 / delta**2
+      values(1) = -4.0 / delta2
     end if
     call HYPRE_StructMatrixSetBoxValues(A, ilower, iupper, 1, & 
         stencil_indices, values, ierr)
@@ -301,7 +302,8 @@ contains
 
   end subroutine init_hypre_solver
   
-  subroutine solve_poisson(rhs)
+  !subroutine solve_poisson(rhs)
+  subroutine solve_poisson_hypre(temp)
       
     ! This subroutine solve the poisson equation
     ! nabal^2 f = rhs
@@ -315,9 +317,17 @@ contains
     
     implicit none
 
-    integer :: i, ilower(2), iupper(2),  num_iterations
+    integer :: i, j, ilower(2), iupper(2),  num_iterations
     real :: mean
-    real, dimension(:), intent(inout) :: rhs
+    real, dimension(nx*ny) :: rhs
+    real, intent(inout) :: temp(:,:)
+
+    ! We copy the array rhs in the two-dimensional array phi
+    do j = 1,ny
+      do i = 1,nx
+        rhs(i + (j-1)*nx) = temp(i,j)
+      end do
+    end do
 
     ! Set the array d equal to the rhs
     ilower = [1, 1]
@@ -351,8 +361,15 @@ contains
         rhs(i) = rhs(i) - mean
       end do
     end if
+
+    ! We copy the array rhs in the two-dimensional array phi
+    do j = 1,ny
+      do i = 1,nx
+        temp(i,j) = rhs(i + (j-1)*nx)
+      end do
+    end do
         
-  end subroutine solve_poisson
+  end subroutine solve_poisson_hypre
 
   subroutine destroy_hypre_solver
 

@@ -1,5 +1,5 @@
 FC = mpif90
-FOPTS = -g -Wall -fcheck=bound -fdefault-real-8 -cpp # -O2 -ffpe-trap=invalid,zero,overflow
+FOPTS = -g -Wall -O2 -fcheck=bound -fdefault-real-8 -cpp
 CODE_DIR = $(REO)
 
 #HYPRE_DIR = 

@@ -23,11 +23,11 @@ module grid_2d
   !           Neumann 0 on pressure
   ! outflow: Neumann 0 on normal velocity, Dirichlet 0 on tangential velocity,
   !          Dirichlet 0 on pressure
-  ! periodic: periodic in all directions
+  ! periodic: periodic in that direction
   ! By defaul all boundary are set to no-slip
   character(len=9) :: left_boundary = 'no-slip', right_boundary = 'no-slip'
   character(len=9) :: top_boundary = 'no-slip', bottom_boundary = 'no-slip'
-  
+
 contains
 
   subroutine create_grid()
@@ -57,8 +57,8 @@ contains
 
     implicit none
 
-    deallocate(x,y)
-    
-  end subroutine destroy_grid
+   deallocate(x,y)
   
+  end subroutine destroy_grid
+
 end module grid_2d

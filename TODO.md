@@ -5,7 +5,9 @@
 - [ ] Parrallel version
 - [ ] Immersed Boundary Method
 - [ ] Volume of Fluid
+- [ ] Level-set
+- [ ] Elasto-visco-plastic model
 - [ ] 3D version
 - [ ] VTK output
-- [ ] FFT Poisson Solver
+- [x] FFT Poisson Solver
 - [ ] Local compilation in hidden subdirectories (like .mod .o)

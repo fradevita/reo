@@ -3,8 +3,8 @@ FOPTS = -g -Wall -O2 -fcheck=bound -fdefault-real-8 -cpp
 CODE_DIR = $(REO)
 
 #HYPRE_DIR = 
-INCLUDES = -I$(HYPRE_DIR)/include -I$(CODE_DIR)
-LIBS = -L$(HYPRE_DIR)/lib -lHYPRE -lm
+INCLUDES = -I$(HYPRE_DIR)/include -I$(CODE_DIR) -I$(FFTW3_DIR)/include
+LIBS = -L$(HYPRE_DIR)/lib -lHYPRE -lm -L$(FFTW3_DIR)/lib -lfftw3
 FFLAGS = $(FOPTS) $(INCLUDES)
 FLAGS = $(OPTS) $(LIBS) -lstdc++
 
@@ -12,7 +12,7 @@ FLAGS = $(OPTS) $(LIBS) -lstdc++
 # TEST FOR POISSON EQUATION
 #===============================================================================
 lid: lid.o
-	$(FC) -o $@ $< grid_2d.o boundary_conditions.o navier_stokes.o hypre_solver.o navier_stokes_pub.o $(FLAGS)
+	$(FC) -o $@ $< grid_2d.o boundary_conditions.o navier_stokes.o hypre_solver.o navier_stokes_pub.o fft_solver.o $(FLAGS)
 
 lid.o: lid.f08 grid_2d.o navier_stokes.o
 	$(FC) $(FFLAGS) -c $<
@@ -21,10 +21,13 @@ lid.o: lid.f08 grid_2d.o navier_stokes.o
 #===============================================================================
 # Code
 #===============================================================================
-navier_stokes.o: $(CODE_DIR)/navier_stokes.f08 grid_2d.o boundary_conditions.o hypre_solver.o navier_stokes_pub.o
+navier_stokes.o: $(CODE_DIR)/navier_stokes.f08 grid_2d.o boundary_conditions.o hypre_solver.o navier_stokes_pub.o fft_solver.o
 	$(FC) $(FFLAGS) -c $<
 
 hypre_solver.o: $(CODE_DIR)/hypre_solver.f08 grid_2d.o boundary_conditions.o
+	$(FC) $(FFLAGS) -c $<
+
+fft_solver.o: $(CODE_DIR)/fft_solver.f08 grid_2d.o boundary_conditions.o
 	$(FC) $(FFLAGS) -c $<
 
 boundary_conditions.o: $(CODE_DIR)/boundary_conditions.f08 navier_stokes_pub.o

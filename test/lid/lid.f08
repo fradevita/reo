@@ -22,6 +22,9 @@ program lid
   ! Create the grid
   call create_grid()
 
+  ! Select Poisson solver
+  poisson_solver_type = 'itr'
+
   ! First we need to initialize the solver
   call init_ns_solver()
 

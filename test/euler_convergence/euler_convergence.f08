@@ -15,6 +15,9 @@ program euler
   top_boundary = 'periodic'
   bottom_boundary = 'periodic'
 
+  ! Select the Poisson solver
+  poisson_solver_type = 'itr'
+
   ! Set the number of points and the domain size
   call getarg(1,arg)
   read(arg,*) n

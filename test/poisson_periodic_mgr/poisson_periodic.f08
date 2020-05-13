@@ -9,7 +9,7 @@ program poisson_periodic
   include 'mpif.h'  
   integer :: i, j, n
   real :: s, e, emax
-  real, dimension(:), allocatable :: rhs
+  real, dimension(:,:), allocatable :: rhs
   
   open(unit = 1, file = 'error')
   
@@ -39,10 +39,10 @@ program poisson_periodic
     call init_hypre_solver('periodic','periodic','periodic','periodic')
 
     ! We give the RHS of the poisson equation
-    allocate(rhs(nx*ny))
+    allocate(rhs(nx,ny))
     do j = 1,ny
       do i = 1,nx
-        rhs(i + (j-1)*ny) = -8.0*pi*pi*sin(2.*pi*x(i,j))*sin(2.*pi*y(i,j))
+        rhs(i,j) = -8.0*pi*pi*sin(2.*pi*x(i,j))*sin(2.*pi*y(i,j))
       end do
     end do
 
@@ -50,14 +50,14 @@ program poisson_periodic
     tolerance = 1.0e-30
     
     ! solve the poisson equation
-    call solve_poisson(rhs)
+    call solve_poisson_hypre(rhs)
 
     ! and compute the error with analytical solution
     emax = 0.0
     do j = 1,ny
       do i = 1,nx
         s = sin(2.*pi*x(i,j))*sin(2.*pi*y(i,j))
-        e = abs(s - rhs(i+(j-1)*ny))
+        e = abs(s - rhs(i,j))
         if (e .gt. emax) emax = e
       end do
     end do

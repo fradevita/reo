@@ -12,23 +12,24 @@ program poiseuille
   real, dimension(:,:), allocatable :: uold
   
   ! Boundary conditions
-  left_boundary = 'inflow'
-  right_boundary = 'outflow'
+  left_boundary = 'periodic'
+  right_boundary = 'periodic'
+
+  ! Select the Poisson solver
+  poisson_solver_type = 'itr'
   
   ! Set the number of points and the domain size
   call getarg(1,arg)
   read(arg,*) n
-  nx = 4*(2**n)
+  print *, n
+  nx = 2**n
   ny = 2**n
-  Lx = 4.0
+  Lx = 1.0
   Ly = 1.0
   x0 = -0.5
   y0 = -0.5
 
   allocate(uold(nx+1,ny))
-
-  ! Select Poisson solver 
-  poisson_solver_type = 'itr'
 
   ! Create the grid
   call create_grid()
@@ -39,14 +40,12 @@ program poiseuille
   ! We set the viscosity to 1
   mu = 1.0
 
-  ! Boundary condition
-  do i = u%lo(2),u%up(2)
-    u%l(i) = 0.5*(0.25 - (y(1,i))**2)
-  end do
+  ! Source term
+  Sx = 1.0
 
   ! Set the timestep and maximum number of iterations
-  dt = 0.05*(dx**2 + dy**2)/mu
-  nstep = 1000000
+  dt = 0.1*(dx**2 + dy**2) / mu
+  nstep = 100000
 
   ! We compute some quantites to check the properties of the scheme
   event_i => e_istep
@@ -64,7 +63,7 @@ contains
         uold(i,j) = u%f(i,j)
       end do
     end do
-    
+
   end subroutine e_istep
     
   subroutine output()
@@ -74,7 +73,7 @@ contains
     ! Check for steady-state
     real :: diff, s, e, emax
     logical :: steady
-    integer :: i, j
+    integer :: i, j, imax, jmax
     
     steady = .true.
     
@@ -92,7 +91,11 @@ contains
         do i = u%lo(1),u%up(1)-1
           s = 0.5*(0.25 - (y(i,j))**2)
           e = abs(s-u%f(i,j))
-          if (e > emax) emax = e
+          if (e > emax) then
+            emax = e
+            imax = i
+            jmax = j
+          end if
         end do
       end do
       print *, 2**n, emax

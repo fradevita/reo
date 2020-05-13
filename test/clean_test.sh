@@ -3,7 +3,7 @@ cd poisson_dirichlet
 make clean
 cd ..
 
-cd poisson_periodic
+cd poisson_periodic_mgr
 make clean
 cd ..
 
@@ -11,7 +11,11 @@ cd euler_convergence
 make clean
 cd ..
 
-cd poiseuille
+cd poiseuille_mgr
+make clean
+cd ..
+
+cd poiseuille_fft
 make clean
 cd ..
 
