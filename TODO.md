@@ -4,7 +4,7 @@
 - [x] Multiblock version
 - [x] Parrallel version
 - [ ] Immersed Boundary Method
-- [ ] Volume of Fluid
+- [x] Volume of Fluid
 - [ ] Level-set
 - [ ] Elasto-visco-plastic model
 - [ ] 3D version
