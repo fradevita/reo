@@ -1,42 +1,41 @@
 program lid
 
   use grid_2d
-  include "navier_stokes.h"
+  use navier_stokes
 
   implicit none
-  integer :: i, j
+  include 'mpif.h'
+
+  integer :: nx, ny
 
   ! We need an auxiliary field to check steady state
-  real, dimension(:,:), allocatable :: uold
+  type(field), dimension(1) :: uold
+
+  ! First we need to initialize MPI
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, pid, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, num_procs, ierr)
+  mpi_common_world = MPI_COMM_WORLD
 
   ! Set the number of points and the domain size
   nx = 64
   ny = 64
-  Lx = 1.0
-  Ly = 1.0
-  x0 = -0.5
-  y0 = -0.5
-
-  allocate(uold(nx,ny))
 
   ! Create the grid
-  call create_grid()
+  allocate(boxarray(1))
+  call create_box(1, nx, ny, 1.d0, 1.d0, -0.5d0, -0.5d0)
 
   ! Select Poisson solver
   poisson_solver_type = 'itr'
+  
+  ! We set the viscosity to 1
+  viscosity = 1.0e-3
 
   ! First we need to initialize the solver
   call init_ns_solver()
 
   ! Boundary conditions
-  u%t = 1.0
-  
-  ! We set the viscosity to 1
-  mu = 1.0e-3
-
-  ! We compute the solution up to steady state
-  dt = min(0.3 * dx / 1.0, 0.1*(dx**2 + dy**2) / mu)
-  nstep = 100000
+  u(1)%t = 1.0
 
   ! We check for steady state
   event_i => e_istep
@@ -49,11 +48,9 @@ contains
   
   subroutine e_istep()
 
-    do j = 1,ny
-      do i = 2,nx
-        uold(i,j) = u%f(i,j)
-      end do
-    end do
+    implicit none
+
+      uold = u
 
   end subroutine e_istep
     
@@ -62,50 +59,53 @@ contains
     implicit none
     
     ! Check for steady-state
-    real :: diff, uc, vc, diffmax, vort
+    real(kind=dp) :: diff, uc, vc, diffmax, vort, x, y
     logical :: steady
     integer :: i, j, out_id, xprof, yprof
     
     steady = .true.
     diffmax = 0.0
  
-    do j = 1,ny
-      do i = 2,nx
-        diff = abs(u%f(i,j) - uold(i,j))
+    do j = u(1)%lo(2),u(1)%up(2)
+      do i = u(1)%lo(1),u(1)%up(1)
+        diff = abs(u(1)%f(i,j) - uold(1)%f(i,j))
         if (diff > 1.0e-5) steady = .false.
         if (diff > diffmax) diffmax = diff
       end do
     end do
 
-    write(log,*) 'maximum difference: ', diffmax
-   
     if (steady) then
-      ! We output the horizontal porfile of y-component of the velocity and
+      ! Output the horizontal porfile of y-component of the velocity and
       ! vertical profile of x-component of the velocity on the centerline of the box
       open(newunit = xprof, file = 'xprof')
       i = nx / 2
       do j = 1,ny
-        write(xprof,*) y(i,j), 0.5*(u%f(i,j) + u%f(i-1,j))
+        y = boxarray(1)%p0(2) + (j - 0.5)*boxarray(1)%delta
+        write(xprof,*) y, 0.5*(u(1)%f(i,j) + u(1)%f(i+1,j))
       end do
       close(xprof)
 
       open(newunit = yprof, file = 'yprof')
       j = ny / 2
       do i = 1,nx
-        write(yprof,*) x(i,j), 0.5*(v%f(i,j)+v%f(i,j+1))
+        x = boxarray(1)%p0(1) + (i - 0.5)*boxarray(1)%delta
+        write(yprof,*) x, 0.5*(v(1)%f(i,j) + v(1)%f(i,j+1))
       end do
       close(yprof)
 
-      ! We output also the norm of the velocity field at the steady state
+      ! Output also the norm of the velocity field at the steady state
+      ! and vorticity
       open(newunit = out_id, file = 'out')
       do j = 1,ny
         do i = 1,nx
-          uc = 0.5*(u%f(i,j) + u%f(i+1,j))
-          vc = 0.5*(v%f(i,j) + v%f(i,j+1))
-          vort = 0.25*(u%f(i,j+1) + u%f(i+1,j+1) - u%f(i,j-1) - u%f(i+1,j-1)) / dx - &
-              0.25*(v%f(i+1,j) + v%f(i+1,j) - v%f(i-1,j+1) - v%f(i-1,j+1)) / dy
+          uc = 0.5*(u(1)%f(i,j) + u(1)%f(i+1,j))
+          vc = 0.5*(v(1)%f(i,j) + v(1)%f(i,j+1))
+          vort = 0.25*(u(1)%f(i,j+1) + u(1)%f(i+1,j+1) - &
+                       u(1)%f(i,j-1) - u(1)%f(i+1,j-1)) / boxarray(1)%delta - &
+                 0.25*(v(1)%f(i+1,j) + v(1)%f(i+1,j+1) - &
+                       v(1)%f(i-1,j+1) - v(1)%f(i-1,j)) / boxarray(1)%delta
           
-          write(out_id,*) i, j, sqrt(uc**2 + vc**2), p%f(i,j), vort
+          write(out_id,*) i, j, sqrt(uc**2 + vc**2), vort
         end do
         write(out_id,*) ''
       end do

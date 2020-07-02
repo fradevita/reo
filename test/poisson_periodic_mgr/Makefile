@@ -1,5 +1,5 @@
 FC = mpif90
-FOPTS = -g -Wall -O2 -fcheck=bound -fdefault-real-8
+FOPTS = -g -Wall -fcheck=bound
 CODE_DIR = $(REO)
 
 #HYPRE_DIR = /home/fdv/hypre/src/hypre
@@ -12,7 +12,7 @@ FLAGS = $(OPTS) $(LIBS) -lstdc++
 # TEST FOR POISSON EQUATION
 #===============================================================================
 poisson_periodic: poisson_periodic.o
-	$(FC) -o $@ $< grid_2d.o boundary_conditions.o hypre_solver.o $(FLAGS)
+	$(FC) -o $@ $< grid_2d.o hypre_solver.o $(FLAGS)
 
 poisson_periodic.o: poisson_periodic.f08 grid_2d.o hypre_solver.o
 	$(FC) $(FFLAGS) -c $<
@@ -21,16 +21,7 @@ poisson_periodic.o: poisson_periodic.f08 grid_2d.o hypre_solver.o
 #===============================================================================
 # Code
 #===============================================================================
-navier_stokes.o: $(CODE_DIR)/navier_stokes.f08 grid_2d.o boundary_conditions.o hypre_solver.o navier_stokes_pub
-	$(FC) $(FFLAGS) -c $<
-
-hypre_solver.o: $(CODE_DIR)/hypre_solver.f08 grid_2d.o boundary_conditions.o
-	$(FC) $(FFLAGS) -c $<
-
-boundary_conditions.o: $(CODE_DIR)/boundary_conditions.f08 navier_stokes_pub.o
-	$(FC) $(FFLAGS) -c $<
-
-navier_stokes_pub.o: $(CODE_DIR)/navier_stokes_pub.f08
+hypre_solver.o: $(CODE_DIR)/hypre_solver.f08 grid_2d.o
 	$(FC) $(FFLAGS) -c $<
 
 grid_2d.o: $(CODE_DIR)/grid_2d.f08

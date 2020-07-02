@@ -43,4 +43,4 @@ set view map
 unset clabel
 set cntrparam levels discr -3.0,-2.0,-1.0,-0.5,0.0,0.5,1.0,2.0,3.0,4.0,5.0,6.0
 set size ratio 1
-splot[1:64][1:64] 'out' u 1:2:5 w l lc rgb 'black'
+splot[1:64][1:64] 'out' u 1:2:4 w l lc rgb 'black'

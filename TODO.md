@@ -1,8 +1,8 @@
 ### Next things to implement (not ordered)
 
 - [x] Generalized boundary conditions
-- [ ] Multiblock version
-- [ ] Parrallel version
+- [x] Multiblock version
+- [x] Parrallel version
 - [ ] Immersed Boundary Method
 - [ ] Volume of Fluid
 - [ ] Level-set

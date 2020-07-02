@@ -1,21 +1,21 @@
 program poisson_dirichlet
 
-  use grid_2d  
-  ! We want to solve one simple poisson equation using the hypre solver
-  ! We need to include the module
+  use grid_2d 
   use hypre_solver
   
   implicit none
+
   include 'mpif.h'  
-  integer :: i, j, n
-  real :: s, e, emax
-  real, dimension(:,:), allocatable :: rhs
+  
+  integer :: i, j, n, nx, ny
+  real(kind=dp) :: Lx, Ly, s, e, emax, x0, y0
+  type(myarray), dimension(:), allocatable :: rhs
   
   open(unit = 1, file = 'error')
   
   ! First we need to initialize MPI
   call MPI_INIT(ierr)
-  call MPI_COMM_RANK(MPI_COMM_WORLD, myid, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, pid, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, num_procs, ierr)
   mpi_common_world = MPI_COMM_WORLD
 
@@ -26,23 +26,30 @@ program poisson_dirichlet
     ny = 2**n
     Lx = 1.0
     Ly = 1.0
+    x0 = 0.0
+    y0 = 0.0
 
     ! and create the computational grid
-    call create_grid()
+    allocate(boxarray(1))
+    call create_box(1, nx, ny, Lx, Ly, x0, y0)
 
-    ! Then we initialize the hypre solver
-    call init_hypre_solver('dirichlet','dirichlet','dirichlet','dirichlet')
+    ! Set boundary conditions for the Poisson solver on the box
+    boxarray(1)%left = 'dirichlet'
+    boxarray(1)%right = 'dirichlet'
+    boxarray(1)%top = 'dirichlet'
+    boxarray(1)%bottom = 'dirichlet'
 
-    ! We give the RHS of the poisson equation
-    allocate(rhs(nx,ny))
+    ! Then initialize the hypre solver
+    call init_hypre_solver()
+
+    ! Set the RHS of the poisson equation
+    allocate(rhs(nbox))
+    allocate(rhs(1)%f(nx,ny))
     do j = 1,ny
       do i = 1,nx
-        rhs(i,j) = -pi*pi*18.*sin(3.*pi*x(i,j))*sin(3.*pi*y(i,j))
+        rhs(1)%f(i,j) = -pi*pi*18.*sin(3.*pi*boxarray(1)%x(i,j))*sin(3.*pi*boxarray(1)%y(i,j))
       end do
     end do
-
-    ! We set the tolerance to 1.0e-30 and we add more information in output
-    tolerance = 1.0e-30
     
     ! solve the poisson equation
     call solve_poisson_hypre(rhs)
@@ -51,18 +58,19 @@ program poisson_dirichlet
     emax = 0.0
     do j = 1,ny
       do i = 1,nx
-        s = sin(pi*3*x(i,j))*sin(pi*3*y(i,j))
-        e = abs(s - rhs(i,j))
+        s = sin(pi*3*boxarray(1)%x(i,j))*sin(pi*3*boxarray(1)%y(i,j))
+        e = abs(s - rhs(1)%f(i,j))
         if (e .gt. emax) emax = e
       end do
     end do
     write(1,*) nx, emax
 
     ! Free the memory
+    deallocate(rhs(1)%f)
     deallocate(rhs)
     call destroy_hypre_solver
-    call destroy_grid
-    
+    call destroy_boxes
+
   end do
   close(1)
   

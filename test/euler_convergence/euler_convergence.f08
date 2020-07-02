@@ -1,106 +1,95 @@
 program euler
 
   use grid_2d
-  include "navier_stokes.h"
+  use navier_stokes
 
   implicit none
-  integer :: i, j, n, keid
-  real :: xl, yl
-  character(len=4) :: arg
-  character(len=6) :: filename
-  
-  ! Boundary conditions
-  left_boundary = 'periodic'
-  right_boundary = 'periodic'
-  top_boundary = 'periodic'
-  bottom_boundary = 'periodic'
 
-  ! Select the Poisson solver
-  poisson_solver_type = 'itr'
+  include 'mpif.h'
+
+  integer :: i, j, n, nx, ny
+  real(kind=dp) :: x, y
+  character(len=4) :: arg
+
+  ! Initialize MPI
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, pid, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, num_procs, ierr)
+  mpi_common_world = MPI_COMM_WORLD
 
   ! Set the number of points and the domain size
   call getarg(1,arg)
   read(arg,*) n
   nx = 2**n
   ny = 2**n
-  Lx = 1.0
-  Ly = 1.0
-  x0 = -0.5
-  y0 = -0.5
 
   ! Create the grid
-  call create_grid()
+  allocate(boxarray(1))
+  call create_box(1, nx, ny, 1.d0, 1.d0, -0.5d0, -0.5d0)
+  
+  ! Boundary conditions
+  boxarray(1)%left_boundary = 'periodic'
+  boxarray(1)%right_boundary = 'periodic'
+  boxarray(1)%top_boundary = 'periodic'
+  boxarray(1)%bottom_boundary = 'periodic'
 
-  ! First we need to initialize the solver
+  ! Select the Poisson solver
+  poisson_solver_type = 'itr'
+
+  ! Set the viscosity to zero
+  viscosity = 0.
+
+  ! Initialize the solver
   call init_ns_solver()
 
-  ! We set the initial velocity field
-  do j = u%lo(2),u%up(2)
-    yl = y0 + (j - 0.5) * dy
-    do i = u%lo(1),u%up(1)
-      xl = x0 + (i - 1.0) * dx
-      u%f(i,j) = 1.0 - 2.0*cos(2.0*pi*xl)*sin(2.0*pi*yl)
+  ! Set the initial velocity field
+  do j = u(1)%lo(2),u(1)%up(2)
+    y = boxarray(1)%p0(2) + (j - 0.5) * boxarray(1)%delta
+    do i = u(1)%lo(1),u(1)%up(1)
+      x = boxarray(1)%p0(1) + (i - 1.0) * boxarray(1)%delta
+      u(1)%f(i,j) = 1.0 - 2.0*cos(2.0*pi*x)*sin(2.0*pi*y)
     end do
   end do
 
-  do j = v%lo(2),v%up(2)
-    yl = y0 + (j - 1.0) * dy
-    do i = v%lo(1),v%up(1)
-      xl = x0 + (i - 0.5) * dx
-      v%f(i,j) = 1.0 + 2.0*sin(2.0*pi*xl)*cos(2.0*pi*yl)
+  do j = v(1)%lo(2),v(1)%up(2)
+    y = boxarray(1)%p0(2) + (j - 1.0) * boxarray(1)%delta
+    do i = v(1)%lo(1),v(1)%up(1)
+      x = boxarray(1)%p0(1) + (i - 0.5) * boxarray(1)%delta
+      v(1)%f(i,j) = 1.0 + 2.0*sin(2.0*pi*x)*cos(2.0*pi*y)
     end do
   end do
 
-  ! We want to solve the euler equation so we set the viscosity to zero
-  mu = 0.0
-
-  ! We compute the solution up to time T = 0.5 and then compare the computed solution with
+  ! Compute the solution up to time T = 0.5 and then compare the computed solution with
   ! the analytical solution
-  dt = 0.35 * dx / 4.0
+  dt = 0.35 * boxarray(1)%delta / 4.0
   Tmax = 0.5
-  nstep = int(Tmax / dt)
 
-  ! We compute the error at the end of the simulation
-  filename = trim('ke'//arg)
-  open(newunit = keid, file = filename)
-  event_i => ket
+  ! Compute the error at the end of the simulation
   event_end => output_error
 
   ! We run the simulation
   call solve()
 
 contains
-
-  subroutine ket()
-    ! Compute time history of the kinetic energy
-    real :: uc, vc, ke
-
-    ke = 0.0
-    do j = 1,ny
-      do i = 1,nx
-        uc = 0.5*(u%f(i+1,j) + u%f(i,j))
-        vc = 0.5*(v%f(i,j) + v%f(i,j+1))
-        ke = ke + uc**2 + vc**2
-      end do
-    end do
-    write(keid,*) t, ke/float(nx*ny) 
-  end subroutine ket
-
     
   subroutine output_error()
     
     ! Compute the error with respect to the analytical solution
-    
-    real :: s, e, e2
+
+    implicit none    
+
+    real(kind=dp) :: s, e, e2, delta
+
+    delta = boxarray(1)%delta
 
     e2 = 0.0
-    do j = u%lo(2),u%up(2)
-      yl = y0 + (j - 0.5) * dy
-      do i = u%lo(1),u%up(1)
-         xl = x0 + (i - 1.0) * dx
-        s = 1.0 - 2.0 * cos(2.0*pi*(xl - t))*sin(2.0*pi*(yl-t))
-        e = abs(s-u%f(i,j))
-        e2 = e2 + e**2 * dx**2
+    do j = u(1)%lo(2),u(1)%up(2)
+      y = boxarray(1)%p0(2) + (j - 0.5)*delta
+      do i = u(1)%lo(1),u(1)%up(1)
+         x = boxarray(1)%p0(1) + (i - 1.0)*delta
+        s = 1.0 - 2.0 * cos(2.0*pi*(x - t))*sin(2.0*pi*(y - t))
+        e = abs(s-u(1)%f(i,j))
+        e2 = e2 + e**2 * delta**2
       end do
     end do
     
