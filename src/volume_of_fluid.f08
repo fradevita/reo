@@ -48,14 +48,14 @@ contains
       d(n)%lo = [1, 1]
       d(n)%up = [boxarray(n)%nx, boxarray(n)%ny]
       if (boxarray(n)%left_boundary == 'no-slip' .or. &
-          boxarray(n)%left_boundary == 'free-slip' .or. &
           boxarray(n)%left_boundary  == 'inflow') then
         vof(n)%left = 'dirichlet'
         nx(n)%left = 'dirichlet'
         ny(n)%left = 'dirichlet'
         h(n)%left = 'dirichlet'
         d(n)%left = 'dirichlet'
-      elseif (boxarray(n)%left_boundary == 'outflow') then
+      elseif (boxarray(n)%left_boundary == 'outflow' .or. &
+              boxarray(n)%left_boundary == 'free-slip') then
         vof(n)%left = 'neumann'
         nx(n)%left = 'neumann'
         ny(n)%left = 'neumann'
@@ -81,14 +81,14 @@ contains
         d(n)%left = 'periodic'
       endif
       if (boxarray(n)%right_boundary == 'no-slip' .or. &
-          boxarray(n)%right_boundary == 'free-slip' .or. &
           boxarray(n)%right_boundary  == 'inflow') then
         vof(n)%right = 'dirichlet'
         nx(n)%right = 'dirichlet'
         ny(n)%right = 'dirichlet'
         h(n)%right = 'dirichlet'
         d(n)%right = 'dirichlet'
-      elseif (boxarray(n)%right_boundary == 'outflow') then
+      elseif (boxarray(n)%right_boundary == 'outflow' .or. &
+              boxarray(n)%right_boundary == 'free-slip') then
         vof(n)%right = 'neumann'
         nx(n)%right = 'neumann'
         ny(n)%right = 'neumann'
@@ -114,14 +114,14 @@ contains
         d(n)%right = 'periodic'
       endif
       if (boxarray(n)%top_boundary == 'no-slip' .or. &
-          boxarray(n)%top_boundary == 'free-slip' .or. &
           boxarray(n)%top_boundary  == 'inflow') then
         vof(n)%top = 'dirichlet'
         nx(n)%top = 'dirichlet'
         ny(n)%top = 'dirichlet'
         h(n)%top = 'dirichlet'
         d(n)%top = 'dirichlet'
-      elseif (boxarray(n)%top_boundary == 'outflow') then
+      elseif (boxarray(n)%top_boundary == 'outflow' .or. &
+              boxarray(n)%top_boundary == 'free-slip') then
         vof(n)%top = 'neumann'
         nx(n)%top = 'neumann'
         ny(n)%top = 'neumann'
@@ -147,14 +147,14 @@ contains
         d(n)%top = 'periodic'
       endif
       if (boxarray(n)%bottom_boundary == 'no-slip' .or. &
-          boxarray(n)%bottom_boundary == 'free-slip' .or. &
           boxarray(n)%bottom_boundary  == 'inflow') then
         vof(n)%bottom = 'dirichlet'
         nx(n)%bottom = 'dirichlet'
         ny(n)%bottom = 'dirichlet'
         h(n)%bottom = 'dirichlet'
         d(n)%bottom = 'dirichlet'
-      elseif (boxarray(n)%bottom_boundary == 'outflow') then
+      elseif (boxarray(n)%bottom_boundary == 'outflow' .or. &
+              boxarray(n)%bottom_boundary == 'free-slip') then
         vof(n)%bottom = 'neumann'
         nx(n)%bottom = 'neumann'
         ny(n)%bottom = 'neumann'

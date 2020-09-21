@@ -534,13 +534,14 @@ contains
     endif
 
     ! Set the timestep
-    dtconv = 0.3*boxarray(1)%delta/1.0
+    dtconv = 0.3*boxarray(1)%delta/1.5
     dtvisc = 0.125*(boxarray(1)%delta**2 + boxarray(1)%delta**2)/viscosity
     dt = min(dtconv,dtvisc)
     if (solvemultiphase) then
       dtvisc = 0.125*(boxarray(1)%delta**2 + boxarray(1)%delta**2)/(max(mu0/rho0,mu1/rho1))
-      dtsurf = sqrt(0.5*(rho0+rho1)*(boxarray(1)%delta**3)/(pi*sigma))
-      dt = min(dtconv,dtvisc,dtsurf)
+      !dtsurf = sqrt(0.5*(rho0+rho1)*(boxarray(1)%delta**3)/(pi*sigma))
+      !dt = min(dtconv,dtvisc,dtsurf)
+      dt = min(dtconv,dtvisc)
     endif
 
   end subroutine init_ns_solver
@@ -604,7 +605,7 @@ contains
 
     ! We advance in time the solution
     istep = 0
-
+log = 6
     do while (istep <= nstep .and. t < Tmax)
       
       istep = istep + 1
@@ -827,6 +828,8 @@ contains
   !===============================================================================
   subroutine poisson_rhs()
 
+    use grid_2D, only : pid, boxarray
+
     implicit none
 
     ! Local variables
@@ -922,10 +925,10 @@ contains
     call mpi_allreduce(mpi_in_place,maximum_CFL,1,mpi_real8,mpi_max, &
                        mpi_common_world,ierr)
 
-    if (maximum_divergence > divergence_tol) then
+    !if (maximum_divergence > divergence_tol) then
       if (pid == 0) write(log,*) 'WARNING: divergence is ', maximum_divergence, 'at istep:', istep
-      if (pid == 0) write(log,*) 'in ', imax, jmax
-    endif
+    !  if (pid == 0) write(log,*) 'in ', imax, jmax
+    !endif
 
     if (maximum_CFL > 0.8) then
       if (pid == 0) write(log,*) 'WARNING: CFL is:', maximum_CFL 

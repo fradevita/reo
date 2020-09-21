@@ -12,7 +12,7 @@ program rising
   real(kind=dp) :: Lx, Ly
 
 
-  ! First we need to initialize MPI
+  ! Initialize MPI
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, pid, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, num_procs, ierr)
@@ -104,7 +104,6 @@ program rising
   event_output => output
 
   ! We run the simulation
-  nstep = 100
   call solve()
 
 contains

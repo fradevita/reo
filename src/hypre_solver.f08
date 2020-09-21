@@ -376,9 +376,9 @@ contains
       call HYPRE_StructJacobiSetMaxIter(precond, 2, ierr)
       call HYPRE_StructJacobiSetTol(precond, 0.0, ierr)
       call HYPRE_StructJacobiSetZeroGuess(precond, ierr)
+      call HYPRE_StructBiCGSTABSetPrecond(solver, 8, precond, ierr)
       call HYPRE_StructBiCGSTABSetup(solver, A, d, b, ierr)
       call HYPRE_StructBiCGSTABSolve(solver, A, d, b, ierr)
-      call HYPRE_StructBiCGSTABSetPrecond(solver, 1, precond, ierr)
     elseif (type_hypre_solver == 'SGM') then
       call HYPRE_StructSMGCreate(mpi_common_world, solver, ierr)
       call HYPRE_StructSMGSetMemoryUse(solver, 0, ierr)
